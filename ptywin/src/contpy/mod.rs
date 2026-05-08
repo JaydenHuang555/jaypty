@@ -4,7 +4,7 @@ pub mod internal;
 use jwinutil::sanitize_string;
 use polling::{Event, PollMode, Poller};
 use std::io::{PipeReader, Read, Write};
-use std::sync::{Arc, mpsc};
+use std::sync::{Arc, RwLock, mpsc};
 use std::thread;
 use std::time::Duration;
 use std::{ffi::c_void, mem, os::windows::io::IntoRawHandle, ptr};
@@ -47,9 +47,9 @@ use crate::{
 pub struct ContpyIO {
     handle: ContpyHandle,
     internal: ContpyInternal,
-    cin: NonBlockingPipeWriter,
-    cout: NonBlockingPipeReader,
-    child_exit_watchdog: ChildExitWatchDog,
+    cin: Arc<RwLock<NonBlockingPipeWriter>>,
+    cout: Arc<RwLock<NonBlockingPipeReader>>,
+    child_exit_watchdog: Arc<RwLock<ChildExitWatchDog>>,
 }
 
 unsafe impl Send for ContpyIO {}
@@ -108,6 +108,18 @@ impl ContpyIO {
         si_ex.lpAttributeList = attributes.as_mut_ptr() as _;
 
         unsafe {
+            let exit_stat = InitializeProcThreadAttributeList(
+                si_ex.lpAttributeList,
+                1,
+                0,
+                &mut size as *mut usize,
+            );
+            if exit_stat <= 0 {
+                panic!("unable to init proc thread attribute");
+            }
+        }
+
+        unsafe {
             let exit_stat = UpdateProcThreadAttribute(
                 si_ex.lpAttributeList,
                 0,
@@ -117,7 +129,7 @@ impl ContpyIO {
                 ptr::null_mut(),
                 ptr::null_mut(),
             );
-            if exit_stat > 0 {
+            if exit_stat <= 0 {
                 panic!(
                     "error, unable to update thread attribute due to {}",
                     exit_stat
@@ -125,7 +137,7 @@ impl ContpyIO {
             }
         }
         let creation_flags = EXTENDED_STARTUPINFO_PRESENT;
-        let cmdline = sanitize_string(&"powershell -Command dir");
+        let cmdline = sanitize_string(&"C:\\Windows\\System32\\cmd.exe");
         let mut pi_client: PROCESS_INFORMATION = unsafe { mem::zeroed() };
         let cwd = sanitize_string(&"C:\\Users\\Jshizzle");
         unsafe {
@@ -152,55 +164,69 @@ impl ContpyIO {
         ContpyIO {
             handle: pty_handle as ContpyHandle,
             internal,
-            cin: c_in,
-            cout: c_out,
-            child_exit_watchdog: ChildExitWatchDog::new(pi_client.hProcess),
+            cin: Arc::new(RwLock::new(c_in)),
+            cout: Arc::new(RwLock::new(c_out)),
+            child_exit_watchdog: Arc::new(RwLock::new(ChildExitWatchDog::new(pi_client.hProcess))),
         }
     }
 
     pub fn update_child_alive(&mut self) -> bool {
-        self.child_exit_watchdog.update_child_running()
+        self.child_exit_watchdog
+            .write()
+            .unwrap()
+            .update_child_running()
     }
 
     pub fn wait(&mut self) {
-        while self.child_exit_watchdog.update_child_running() {
-            thread::sleep(Duration::from_millis(500));
+        loop {
+            let stat = self
+                .child_exit_watchdog
+                .write()
+                .unwrap()
+                .update_child_running();
+            if !stat {
+                break;
+            }
         }
     }
 
     pub fn register_all(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        self.cin.register(poller, event, mode);
-        self.cout.register(poller, event, mode);
+        self.cin.write().unwrap().register(poller, event, mode);
+        self.cout.write().unwrap().register(poller, event, mode);
     }
 
     pub fn register_cout(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        self.cout.register(poller, event, mode);
+        self.cout.write().unwrap().register(poller, event, mode);
     }
 
     pub fn register_cin(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        self.cin.register(poller, event, mode);
+        self.cin.write().unwrap().register(poller, event, mode);
     }
 
-    pub fn reader(&mut self) -> &mut NonBlockingPipeReader {
+    pub fn reader(&mut self) -> &mut Arc<RwLock<NonBlockingPipeReader>> {
         &mut self.cout
     }
 
-    pub fn writer(&mut self) -> &mut NonBlockingPipeWriter {
+    pub fn writer(&mut self) -> &mut Arc<RwLock<NonBlockingPipeWriter>> {
         &mut self.cin
+    }
+
+    pub fn child_watch_dog(&mut self) -> &mut Arc<RwLock<ChildExitWatchDog>> {
+        &mut self.child_exit_watchdog
     }
 }
 
 impl Write for ContpyIO {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.cin.write(buf)
+        self.cin.write().unwrap().write(buf)
     }
     fn flush(&mut self) -> std::io::Result<()> {
-        self.cin.flush()
+        self.cin.write().unwrap().flush()
     }
 }
 
 impl Read for ContpyIO {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.cout.read(buf)
+        self.cout.write().unwrap().read(buf)
     }
 }

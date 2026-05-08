@@ -1,5 +1,4 @@
 pub mod io;
-pub mod message;
 pub mod pipe;
 pub mod tokens;
 
