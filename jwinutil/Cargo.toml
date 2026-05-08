@@ -1,19 +1,10 @@
 [package]
-name = "ptywin"
+name = "jwinutil"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-log = "0.4.29"
-mio = {version = "1.2.0", features = ["os-poll", "os-ext"]}
-miow = "0.6.1"
-piper = "0.2.5"
-polling = "3.11.0"
-thiserror = "2.0.18"
-jaypty = {path = "../jaypty"}
-jwinutil = {path = "../jwinutil"}
 
-[target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59.0", features = [
     "Win32_System_Console",
     "Win32_Foundation",
