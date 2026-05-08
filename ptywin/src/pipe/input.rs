@@ -1,17 +1,20 @@
 use std::{
     io::Write,
-    sync::Arc,
+    sync::{Arc, Mutex},
     task::{Context, Poll, Waker},
     thread::{self, JoinHandle},
 };
 
+use jaypty::pipe::PipeKind;
 use piper::{Writer, pipe};
+use polling::{Event, PollMode, Poller};
 
-use crate::pipe::ThreadWaker;
+use crate::pipe::{RegisteredTask, ThreadWaker, WrappedRegisteredTask};
 
 pub struct NonBlockingPipeWriter {
     pipe: Writer,
     handle: Option<JoinHandle<()>>,
+    task: Arc<WrappedRegisteredTask>,
 }
 
 impl Drop for NonBlockingPipeWriter {
@@ -50,14 +53,31 @@ impl NonBlockingPipeWriter {
         Self {
             pipe: writer,
             handle: Some(handle),
+            task: Arc::new(WrappedRegisteredTask {
+                kind: PipeKind::Write,
+                task: Mutex::new(None),
+            }),
         }
+    }
+
+    pub fn register(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
+        let mut task = self.task.task.lock().unwrap();
+        *task = Some(RegisteredTask {
+            poller: poller.clone(),
+            event: event,
+            mode: mode,
+        });
     }
 }
 
 impl Write for NonBlockingPipeWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let n = self.pipe.try_fill(buf);
-        Ok(n)
+        let waker = Waker::from(self.task.clone());
+        let mut ctx = Context::from_waker(&waker);
+        match self.pipe.poll_fill_bytes(&mut ctx, buf) {
+            Poll::Pending => Ok(0),
+            Poll::Ready(stat) => Ok(stat),
+        }
     }
 
     fn flush(&mut self) -> std::io::Result<()> {

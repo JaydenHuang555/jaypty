@@ -14,7 +14,7 @@ use windows_sys::{
     s, w,
 };
 
-pub type ContpySession = HPCON;
+pub type ContpyHandle = HPCON;
 
 /// internal window functions as defined by
 /// https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/#using-the-conpty-api
@@ -42,17 +42,19 @@ type ResizePseudoConsoleFn = unsafe extern "system" fn(HPCON, COORD) -> HRESULT;
 type ClosePseudoConsoleFn = unsafe extern "system" fn(HPCON);
 
 /// layer between windows and this api
-struct ContpyInternal {
+pub struct ContpyInternal {
     create: CreatePseudoConsoleFn,
     resize: ResizePseudoConsoleFn,
     close: ClosePseudoConsoleFn,
 }
 
+unsafe impl Send for ContpyInternal {}
+
 impl ContpyInternal {
     pub fn load() -> Result<ContpyInternal> {
         type LoadedFn = unsafe extern "system" fn() -> isize;
         unsafe {
-            let hmodule = LoadLibraryW(w!("contpy.dll"));
+            let hmodule = LoadLibraryW(w!("conpty.dll"));
             if hmodule.is_null() {
                 return Error::load_err("unable to load contpy.dll").into();
             }
@@ -80,11 +82,11 @@ impl ContpyInternal {
         unsafe { (self.create)(size, input_handle, output_handle, flags, reference) }
     }
 
-    pub fn resize(&self, session: ContpySession, size: COORD) -> HRESULT {
+    pub fn resize(&self, session: ContpyHandle, size: COORD) -> HRESULT {
         unsafe { (self.resize)(session, size) }
     }
 
-    pub fn close(&self, session: ContpySession) {
+    pub fn close(&self, session: ContpyHandle) {
         unsafe { (self.close)(session) }
     }
 }
