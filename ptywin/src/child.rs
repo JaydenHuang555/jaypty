@@ -9,6 +9,7 @@ use std::{
     },
 };
 
+use polling::{Event, PollMode, Poller};
 use windows_sys::Win32::{
     Foundation::{BOOLEAN, HANDLE},
     System::Threading::{
@@ -16,6 +17,8 @@ use windows_sys::Win32::{
         WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE,
     },
 };
+
+use crate::pipe::{RegisteredTask, WrappedRegisteredTask};
 
 extern "system" fn child_exit_callback(context: *mut c_void, timed_out: BOOLEAN) {
     // if timed_out != 0 {
@@ -36,6 +39,7 @@ pub struct ChildExitWatchDog {
     pid: Option<NonZeroU32>,
     child_running: bool,
     reciever: Arc<Mutex<Receiver<bool>>>,
+    registered_task: Arc<WrappedRegisteredTask>,
 }
 
 impl Drop for ChildExitWatchDog {
@@ -72,6 +76,9 @@ impl ChildExitWatchDog {
             pid,
             child_running: true,
             reciever: Arc::new(Mutex::new(event_rx)),
+            registered_task: Arc::new(WrappedRegisteredTask::new(
+                jaypty::pipe::PipeKind::ChildWatchdog,
+            )),
         }
     }
 
@@ -87,6 +94,15 @@ impl ChildExitWatchDog {
             }
         }
         true
+    }
+
+    pub fn register(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
+        let mut lock = self.registered_task.task.lock().unwrap();
+        *lock = Some(RegisteredTask {
+            poller: poller.clone(),
+            event,
+            mode,
+        })
     }
 
     pub fn child_handle(&self) -> HANDLE {

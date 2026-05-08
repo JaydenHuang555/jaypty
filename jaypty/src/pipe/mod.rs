@@ -10,6 +10,7 @@ pub trait PtyWritePipe {
 pub enum PipeKind {
     Write,
     Read,
+    ChildWatchdog,
 }
 
 impl PipeKind {
@@ -17,6 +18,7 @@ impl PipeKind {
         match self {
             Self::Read => true,
             Self::Write => false,
+            Self::ChildWatchdog => true,
         }
     }
 
@@ -24,6 +26,7 @@ impl PipeKind {
         match self {
             Self::Read => false,
             Self::Write => true,
+            Self::ChildWatchdog => false,
         }
     }
 }

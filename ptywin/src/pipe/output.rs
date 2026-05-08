@@ -6,7 +6,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use jaypty::{message::Message, pipe::PipeKind};
+use jaypty::pipe::PipeKind;
 use miow::pipe::{AnonRead, AnonWrite};
 use piper::{Reader, pipe};
 use polling::{
@@ -22,13 +22,13 @@ pub struct NonBlockingPipeReader {
     tasks: Arc<WrappedRegisteredTask>,
 }
 
-impl Drop for NonBlockingPipeReader {
-    fn drop(&mut self) {
-        if let Some(handle) = self.join_handle.take() {
-            handle.join().unwrap();
-        }
-    }
-}
+// impl Drop for NonBlockingPipeReader {
+//     fn drop(&mut self) {
+//         if let Some(handle) = self.join_handle.take() {
+//             handle.join().unwrap();
+//         }
+//     }
+// }
 
 impl NonBlockingPipeReader {
     pub fn new<R: Read + Sized + Send + 'static>(mut source: R, capicity: usize) -> Self {

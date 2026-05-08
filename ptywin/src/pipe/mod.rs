@@ -9,7 +9,7 @@ use std::{
 pub mod input;
 pub mod output;
 
-use jaypty::{message::Message, pipe::PipeKind};
+use jaypty::pipe::PipeKind;
 use miow::pipe::AnonWrite;
 use piper::{Reader, Writer, pipe};
 use polling::{
@@ -32,9 +32,9 @@ impl Wake for ThreadWaker {
 
 #[derive(Clone)]
 pub struct RegisteredTask {
-    poller: Arc<Poller>,
-    event: Event,
-    mode: PollMode,
+    pub poller: Arc<Poller>,
+    pub event: Event,
+    pub mode: PollMode,
 }
 
 impl RegisteredTask {
@@ -48,8 +48,8 @@ impl RegisteredTask {
 }
 
 pub struct WrappedRegisteredTask {
-    kind: PipeKind,
-    task: Mutex<Option<RegisteredTask>>,
+    pub kind: PipeKind,
+    pub task: Mutex<Option<RegisteredTask>>,
 }
 
 impl WrappedRegisteredTask {

@@ -17,13 +17,13 @@ pub struct NonBlockingPipeWriter {
     task: Arc<WrappedRegisteredTask>,
 }
 
-impl Drop for NonBlockingPipeWriter {
-    fn drop(&mut self) {
-        if let Some(handle) = self.handle.take() {
-            handle.join().unwrap();
-        }
-    }
-}
+// impl Drop for NonBlockingPipeWriter {
+//     fn drop(&mut self) {
+//         if let Some(handle) = self.handle.take() {
+//             handle.join().unwrap();
+//         }
+//     }
+// }
 
 impl NonBlockingPipeWriter {
     pub fn new<Sink: 'static + Write + Send>(mut sink: Sink, pipe_capicity: usize) -> Self {
