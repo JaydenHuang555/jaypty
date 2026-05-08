@@ -1,3 +1,4 @@
+pub mod event;
 pub mod io;
 pub mod pipe;
 pub mod tokens;

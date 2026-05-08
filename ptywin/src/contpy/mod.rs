@@ -2,9 +2,10 @@ pub mod error;
 pub mod internal;
 
 use jwinutil::sanitize_string;
+use miow::pipe::{AnonRead, AnonWrite};
 use polling::{Event, PollMode, Poller};
 use std::io::{PipeReader, Read, Write};
-use std::sync::{Arc, RwLock, mpsc};
+use std::sync::{Arc, Mutex, RwLock, mpsc};
 use std::thread;
 use std::time::Duration;
 use std::{ffi::c_void, mem, os::windows::io::IntoRawHandle, ptr};
@@ -37,7 +38,7 @@ pub use error::Error;
 pub use error::ErrorKind;
 pub use error::Result;
 
-use crate::pipe::RegisteredTask;
+use crate::pipe::ScheduledEvent;
 use crate::{
     child::ChildExitWatchDog,
     contpy::internal::{ContpyHandle, ContpyInternal},
@@ -47,8 +48,8 @@ use crate::{
 pub struct ContpyIO {
     handle: ContpyHandle,
     internal: ContpyInternal,
-    cin: Arc<RwLock<NonBlockingPipeWriter>>,
-    cout: Arc<RwLock<NonBlockingPipeReader>>,
+    cin: Option<AnonWrite>,
+    cout: Option<AnonRead>,
     child_exit_watchdog: Arc<RwLock<ChildExitWatchDog>>,
 }
 
@@ -158,14 +159,11 @@ impl ContpyIO {
             }
         }
 
-        let c_out = NonBlockingPipeReader::new(cout, 1024);
-        let c_in = NonBlockingPipeWriter::new(cin, 1024);
-
         ContpyIO {
             handle: pty_handle as ContpyHandle,
             internal,
-            cin: Arc::new(RwLock::new(c_in)),
-            cout: Arc::new(RwLock::new(c_out)),
+            cin: Some(cin),
+            cout: Some(cout),
             child_exit_watchdog: Arc::new(RwLock::new(ChildExitWatchDog::new(pi_client.hProcess))),
         }
     }
@@ -190,43 +188,15 @@ impl ContpyIO {
         }
     }
 
-    pub fn register_all(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        self.cin.write().unwrap().register(poller, event, mode);
-        self.cout.write().unwrap().register(poller, event, mode);
-    }
-
-    pub fn register_cout(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        self.cout.write().unwrap().register(poller, event, mode);
-    }
-
-    pub fn register_cin(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        self.cin.write().unwrap().register(poller, event, mode);
-    }
-
-    pub fn reader(&mut self) -> &mut Arc<RwLock<NonBlockingPipeReader>> {
-        &mut self.cout
-    }
-
-    pub fn writer(&mut self) -> &mut Arc<RwLock<NonBlockingPipeWriter>> {
-        &mut self.cin
-    }
-
     pub fn child_watch_dog(&mut self) -> &mut Arc<RwLock<ChildExitWatchDog>> {
         &mut self.child_exit_watchdog
     }
-}
 
-impl Write for ContpyIO {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.cin.write().unwrap().write(buf)
+    pub fn take_cin(&mut self) -> AnonWrite {
+        self.cin.take().unwrap()
     }
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.cin.write().unwrap().flush()
-    }
-}
 
-impl Read for ContpyIO {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.cout.write().unwrap().read(buf)
+    pub fn take_cout(&mut self) -> AnonRead {
+        self.cout.take().unwrap()
     }
 }

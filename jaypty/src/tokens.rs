@@ -1,6 +1,6 @@
 use polling::Event;
 
-use crate::pipe::PtyWritePipe;
+use crate::pipe::WritePipe;
 
 pub const TOKEN_READ: usize = 0;
 pub const TOKEN_WRITE: usize = 1;

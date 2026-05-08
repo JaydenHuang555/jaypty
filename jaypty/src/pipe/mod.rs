@@ -1,10 +1,10 @@
-pub trait PtyReadPipe {
-    fn read(&self);
-}
+use std::io::{Read, Write};
 
-pub trait PtyWritePipe {
-    fn write(&self);
-}
+use crate::event::EventCaptureSource;
+
+pub trait ReadPipe: Read + EventCaptureSource {}
+
+pub trait WritePipe: Write + EventCaptureSource {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PipeKind {

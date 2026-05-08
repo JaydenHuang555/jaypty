@@ -1,20 +1,23 @@
 use std::{
     io::Write,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, mpsc::Sender},
     task::{Context, Poll, Waker},
     thread::{self, JoinHandle},
 };
 
-use jaypty::pipe::PipeKind;
+use jaypty::{event::EventCaptureSource, pipe::PipeKind};
+use jaysync::capture::HookableSource;
 use piper::{Writer, pipe};
-use polling::{Event, PollMode, Poller};
+use polling::{
+    Event, PollMode, Poller,
+    os::iocp::{CompletionPacket, PollerIocpExt},
+};
 
-use crate::pipe::{RegisteredTask, ThreadWaker, WrappedRegisteredTask};
+use crate::pipe::{ScheduledEvent, Task, ThreadWaker, output::NonBlockingPipeReader};
 
 pub struct NonBlockingPipeWriter {
     pipe: Writer,
     handle: Option<JoinHandle<()>>,
-    task: Arc<WrappedRegisteredTask>,
 }
 
 // impl Drop for NonBlockingPipeWriter {
@@ -28,7 +31,7 @@ pub struct NonBlockingPipeWriter {
 impl NonBlockingPipeWriter {
     pub fn new<Sink: 'static + Write + Send>(mut sink: Sink, pipe_capicity: usize) -> Self {
         let (mut reader, writer) = pipe(pipe_capicity);
-        let handle = thread::spawn(move || {
+        thread::spawn(move || {
             let waker = Waker::from(Arc::new(ThreadWaker(thread::current())));
             let mut cx = Context::from_waker(&waker);
             loop {
@@ -52,32 +55,14 @@ impl NonBlockingPipeWriter {
         });
         Self {
             pipe: writer,
-            handle: Some(handle),
-            task: Arc::new(WrappedRegisteredTask {
-                kind: PipeKind::Write,
-                task: Mutex::new(None),
-            }),
+            handle: None,
         }
-    }
-
-    pub fn register(&mut self, poller: &Arc<Poller>, event: Event, mode: PollMode) {
-        let mut task = self.task.task.lock().unwrap();
-        *task = Some(RegisteredTask {
-            poller: poller.clone(),
-            event: event,
-            mode: mode,
-        });
     }
 }
 
 impl Write for NonBlockingPipeWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let waker = Waker::from(self.task.clone());
-        let mut ctx = Context::from_waker(&waker);
-        match self.pipe.poll_fill_bytes(&mut ctx, buf) {
-            Poll::Pending => Ok(0),
-            Poll::Ready(stat) => Ok(stat),
-        }
+        Ok(self.pipe.try_fill(buf))
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
