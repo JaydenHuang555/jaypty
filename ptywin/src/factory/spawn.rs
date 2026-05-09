@@ -1,8 +1,3 @@
-pub mod error;
-pub mod factory;
-pub mod io;
-pub mod symbols;
-
 use jwinutil::sanitize_string;
 use miow::pipe::{AnonRead, AnonWrite};
 use polling::{Event, PollMode, Poller};
@@ -36,15 +31,10 @@ use windows_sys::{
     s, w,
 };
 
-pub use error::Error;
-pub use error::ErrorKind;
-pub use error::Result;
-
-pub(crate) use symbols::ContpyHandle;
-pub(crate) use symbols::ContpySymbols;
-pub(crate) use symbols::loaded_symbols;
-
+use crate::ContpyHandle;
+use crate::ContpySymbols;
 use crate::child::ChildProcess;
+use crate::factory;
 
 /// just a helper storage struct
 /// of the outputs when creating a
@@ -63,16 +53,6 @@ pub struct ContpySpawn {
 unsafe impl Send for ContpySpawn {}
 
 impl ContpySpawn {
-    /// transfers the ownership of the cin writer
-    pub fn take_cin(&mut self) -> AnonWrite {
-        self.cin.take().unwrap()
-    }
-
-    /// transfers the ownership of the cout reader
-    pub fn take_cout(&mut self) -> AnonRead {
-        self.cout.take().unwrap()
-    }
-
     pub fn spawn(options: jaypty::Options) -> Self {
         let dimensions = options.dimension;
         let symbols = unsafe { ContpySymbols::instance() };

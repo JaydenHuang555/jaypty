@@ -1,25 +1,20 @@
 use std::{
     io::{Read, Write},
-    marker::PhantomData,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::Arc,
 };
 
-use crate::{Options, PtySize, event::EventKind};
+use polling::{Event, PollMode, Poller};
 
-pub trait PseudoTerminalIO<Reader: Read, Writer: Write> {
-    fn new(_options: Options, sender: Sender<EventKind>) -> Self;
+use crate::{Options, PtySize};
 
-    fn resize(&mut self, _size: PtySize);
-
-    fn cout(&mut self) -> &mut Reader;
-    fn cin(&mut self) -> &mut Writer;
+pub trait PseudoTerminalRegisterIO {
+    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event, mode: Option<PollMode>);
+    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event, mode: Option<PollMode>);
+    unsafe fn unregister(&mut self);
 }
 
-pub fn factory<Reader: Read, Writer: Write, IO: PseudoTerminalIO<Reader, Writer> + 'static>(
-    _io: PhantomData<IO>,
-    options: Options,
-) -> (IO, Receiver<EventKind>) {
-    let (tx, rx) = mpsc::channel();
-    let io = IO::new(options, tx);
-    (io, rx)
+pub trait PseudoTerminalIO<Reader: Read, Writer: Write>: PseudoTerminalRegisterIO {
+    fn new(_options: Options) -> Self;
+
+    fn resize(&mut self, _size: PtySize);
 }

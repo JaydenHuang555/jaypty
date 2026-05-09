@@ -12,6 +12,8 @@ pub enum LoadErrorKind {
 pub enum ErrorKind {
     #[error("unable to load internal")]
     LoadErrKind,
+    #[error("active mspc channel got disconnected")]
+    MspcChannelDisconnect,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +36,13 @@ impl Error {
         Self {
             message: message.into().map(|s| s.as_ref().to_string()),
             kind: ErrorKind::LoadErrKind,
+        }
+    }
+
+    pub fn mspc_channel_disconnect<Input: AsRef<str>>(message: impl Into<Option<Input>>) -> Self {
+        Self {
+            message: message.into().map(|s| s.as_ref().to_string()),
+            kind: ErrorKind::MspcChannelDisconnect,
         }
     }
 }

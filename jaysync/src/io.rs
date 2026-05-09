@@ -4,8 +4,7 @@ use std::{
 };
 
 pub mod nonblocking;
-
-use crate::{notifier::Notifier, wake::EventSenderWaker};
+pub mod waking;
 
 #[derive(Clone)]
 pub struct WriteEvents<Event> {

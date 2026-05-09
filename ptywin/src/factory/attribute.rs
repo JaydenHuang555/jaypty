@@ -5,7 +5,7 @@ use windows_sys::Win32::System::Threading::{
     PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, UpdateProcThreadAttribute,
 };
 
-use crate::contpy::symbols::ContpyHandle;
+use crate::symbols::ContpyHandle;
 
 type Attributes = LPPROC_THREAD_ATTRIBUTE_LIST;
 

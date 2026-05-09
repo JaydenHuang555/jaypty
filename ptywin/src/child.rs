@@ -18,8 +18,6 @@ use windows_sys::Win32::{
     },
 };
 
-pub mod watchdog;
-
 pub struct ChildProcess {
     pid: Option<NonZeroU32>,
     handle: AtomicPtr<c_void>,
