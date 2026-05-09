@@ -1,9 +1,11 @@
 use super::Error;
 use super::Result;
-use std::cell::OnceCell;
 use std::mem;
 use std::sync::OnceLock;
 
+use windows_sys::Win32::System::Console::ClosePseudoConsole;
+use windows_sys::Win32::System::Console::CreatePseudoConsole;
+use windows_sys::Win32::System::Console::ResizePseudoConsole;
 use windows_sys::{
     Win32::{
         Foundation::HANDLE,
@@ -16,7 +18,7 @@ use windows_sys::{
     s, w,
 };
 
-pub type ContpyHandle = HPCON;
+pub(crate) type ContpyHandle = HPCON;
 
 /// internal window functions as defined by
 /// https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/#using-the-conpty-api
@@ -50,6 +52,11 @@ pub struct ContpySymbols {
     close: ClosePseudoConsoleFn,
 }
 
+#[inline]
+pub unsafe fn loaded_symbols() -> &'static ContpySymbols {
+    INSTANCE.get_or_init(|| unsafe { ContpySymbols::load() })
+}
+
 unsafe impl Send for ContpySymbols {}
 
 pub static INSTANCE: OnceLock<ContpySymbols> = OnceLock::new();
@@ -57,15 +64,26 @@ pub static INSTANCE: OnceLock<ContpySymbols> = OnceLock::new();
 impl ContpySymbols {
     #[inline]
     pub unsafe fn instance() -> &'static Self {
-        INSTANCE.get_or_init(|| unsafe { Self::load().unwrap() })
+        unsafe { loaded_symbols() }
+    }
+
+    /// first trys to load the symbols from contpy.dll
+    /// if it can't load from contpy.dll
+    /// load the win api symbols
+    unsafe fn load() -> ContpySymbols {
+        unsafe {
+            Self::load_dll().unwrap_or(ContpySymbols {
+                create: CreatePseudoConsole,
+                resize: ResizePseudoConsole,
+                close: ClosePseudoConsole,
+            })
+        }
     }
 
     /// loads symbols from contpy.dll
     /// assuming it is in the same directory
-    /// as the exectuable
-    ///
-    /// TODO: add support for when contpy.dll is not present
-    unsafe fn load() -> Result<ContpySymbols> {
+    /// as the executable binary
+    unsafe fn load_dll() -> Result<ContpySymbols> {
         type LoadedFn = unsafe extern "system" fn() -> isize;
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));
@@ -85,6 +103,13 @@ impl ContpySymbols {
         }
     }
 
+    /// Creates a "Pseudo Console" (ConPTY).
+    /// HRESULT WINAPI CreatePseudoConsole(
+    /// _In_ COORD size,        // ConPty Dimensions
+    /// _In_ HANDLE hInput,     // ConPty Input
+    /// _In_ HANDLE hOutput,    // ConPty Output
+    /// _In_ DWORD dwFlags,     // ConPty Flags
+    /// _Out_ HPCON* phPC);     // ConPty Reference
     pub unsafe fn create(
         &self,
         size: COORD,
@@ -96,11 +121,16 @@ impl ContpySymbols {
         unsafe { (self.create)(size, input_handle, output_handle, flags, reference) }
     }
 
-    pub unsafe fn resize(&self, session: ContpyHandle, size: COORD) -> HRESULT {
-        unsafe { (self.resize)(session, size) }
+    /// Resizes the given ConPTY to the specified size, in characters.
+    /// HRESULT WINAPI ResizePseudoConsole(_In_ HPCON hPC, _In_ COORD size);
+    pub unsafe fn resize(&self, handle: ContpyHandle, size: COORD) -> HRESULT {
+        unsafe { (self.resize)(handle, size) }
     }
 
-    pub unsafe fn close(&self, session: ContpyHandle) {
-        unsafe { (self.close)(session) }
+    /// Closes the ConPTY and all associated handles. Client applications attached
+    /// to the ConPTY will also terminated.
+    /// VOID WINAPI ClosePseudoConsole(_In_ HPCON hPC);
+    pub unsafe fn close(&self, handle: ContpyHandle) {
+        unsafe { (self.close)(handle) }
     }
 }
