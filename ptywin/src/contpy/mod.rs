@@ -38,11 +38,8 @@ pub use error::Error;
 pub use error::ErrorKind;
 pub use error::Result;
 
-use crate::child::ChildProcess;
-use crate::{
-    child::ChildWatchDog,
-    contpy::internal::{ContpyHandle, ContpyInternal},
-};
+use crate::child::{ChildProcess, watchdog::ChildWatchDog};
+use crate::contpy::internal::{ContpyHandle, ContpyInternal};
 
 pub struct ContpyIO {
     handle: ContpyHandle,
@@ -137,7 +134,7 @@ impl ContpyIO {
             }
         }
         let creation_flags = EXTENDED_STARTUPINFO_PRESENT;
-        let cmdline = sanitize_string(&"C:\\Windows\\System32\\cmd.exe");
+        let cmdline = sanitize_string(&"powershell.exe");
         let mut pi_client: PROCESS_INFORMATION = unsafe { mem::zeroed() };
         let cwd = sanitize_string(&"C:\\Users\\Jshizzle");
         unsafe {
@@ -173,5 +170,10 @@ impl ContpyIO {
 
     pub fn take_cout(&mut self) -> AnonRead {
         self.cout.take().unwrap()
+    }
+
+    pub fn spawn_child_watchdog(&self) -> ChildWatchDog {
+        let watchdog = ChildWatchDog::new(&self.child);
+        watchdog
     }
 }

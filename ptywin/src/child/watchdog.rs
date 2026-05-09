@@ -25,11 +25,12 @@ extern "system" fn child_exit_callback(context: *mut c_void, timed_out: BOOLEAN)
     if timed_out != 0 {
         return;
     }
+    log::info!("child callback");
     let event: Box<_> = unsafe { Box::from_raw(context as *mut ChildExitCallback) };
     let child = event.handle.load(Ordering::Relaxed) as HANDLE;
     let mut exit_code = 0_u32;
 
-    let status = unsafe { GetExitCodeProcess(child, &mut exit_code) };
+    let _ = unsafe { GetExitCodeProcess(child, &mut exit_code) };
     event.sender.send(exit_code).ok();
 }
 
@@ -54,7 +55,7 @@ impl Drop for ChildWatchDog {
 }
 
 impl ChildWatchDog {
-    pub fn new<Event>(process_child: &ChildProcess) -> Self {
+    pub fn new(process_child: &ChildProcess) -> Self {
         let (tx, rx) = std::sync::mpsc::channel();
         let child = process_child.child_handle();
 
@@ -93,5 +94,9 @@ impl ChildWatchDog {
         }
         let exit_code = self.reciever.recv().unwrap();
         self.exit_code = Some(exit_code);
+    }
+
+    pub fn is_alive(&self) -> bool {
+        self.alive
     }
 }
