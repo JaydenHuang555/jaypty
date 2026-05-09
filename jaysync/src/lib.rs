@@ -4,12 +4,37 @@ use std::{
     time::Duration,
 };
 
+use polling::{
+    Poller,
+    os::iocp::{CompletionPacket, PollerIocpExt},
+};
+
 pub mod capture;
 pub mod io;
 pub mod mpsc;
 pub mod notifier;
 pub mod queue;
 pub mod wake;
+
+#[derive(Clone)]
+pub struct EventSender<E> {
+    tx: Sender<E>,
+    poller: Arc<Poller>,
+}
+
+impl<E> EventSender<E> {
+    pub fn new(tx: &Sender<E>, poller: &Arc<Poller>) -> Self {
+        Self {
+            tx: tx.clone(),
+            poller: Arc::clone(&poller),
+        }
+    }
+
+    pub fn send(&self, event: E) {
+        self.tx.send(event).unwrap();
+        self.poller.notify().unwrap();
+    }
+}
 
 pub trait AsyncBooleanTrigger<Output: 'static + Send>: Send + 'static {
     fn triggered(&self) -> bool;
