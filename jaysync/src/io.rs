@@ -3,6 +3,8 @@ use std::{
     sync::mpsc::Sender,
 };
 
+pub mod nonblocking;
+
 use crate::{notifier::Notifier, wake::EventSenderWaker};
 
 #[derive(Clone)]
@@ -43,17 +45,27 @@ impl<Writer: Write, Event: Clone> WriteEventCapture<Writer, Event> {
 
 impl<Writer: Write, Event: Clone> Write for WriteEventCapture<Writer, Event> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if let Some(write_event) = self.events.write_event.clone() {
-            self.sender.send(write_event).unwrap();
+        let ret = self.writer.write(buf);
+
+        if let Ok(count) = ret
+            && count > 0
+        {
+            if let Some(write_event) = self.events.write_event.clone() {
+                self.sender.send(write_event).unwrap();
+            }
         }
-        self.writer.write(buf)
+
+        ret
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        if let Some(flush_event) = self.events.flush_event.clone() {
-            self.sender.send(flush_event).unwrap();
+        let ret = self.writer.flush();
+        if ret.is_ok() {
+            if let Some(flush_event) = self.events.flush_event.clone() {
+                self.sender.send(flush_event).unwrap();
+            }
         }
-        self.writer.flush()
+        ret
     }
 }
 
@@ -76,7 +88,12 @@ impl<Reader: Read, Event: Clone> ReadEventCapture<Reader, Event> {
 
 impl<Reader: Read, Event: Clone> Read for ReadEventCapture<Reader, Event> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.sender.send(self.read_event.clone()).unwrap();
-        self.reader.read(buf)
+        let ret = self.reader.read(buf);
+        if let Ok(count) = ret
+            && count > 0
+        {
+            self.sender.send(self.read_event.clone()).unwrap();
+        }
+        ret
     }
 }

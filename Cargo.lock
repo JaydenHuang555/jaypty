@@ -169,6 +169,7 @@ dependencies = [
 name = "jaysync"
 version = "0.1.0"
 dependencies = [
+ "piper",
  "polling",
 ]
 
