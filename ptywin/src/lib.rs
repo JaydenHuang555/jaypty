@@ -19,7 +19,7 @@ mod tests {
         nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
     };
 
-    use crate::contpy::ContpyIO;
+    use crate::contpy::ContpySpawn;
 
     #[test]
     fn blocking() {
@@ -33,7 +33,7 @@ mod tests {
             cwd: Some(path),
             ..Default::default()
         };
-        let mut io = ContpyIO::new(settings);
+        let mut io = ContpySpawn::new(settings);
         let (tx, rx): (Sender<EventKind>, Receiver<EventKind>) = mpsc::channel();
         let cin_capture = WriteEventCapture::new(
             io.take_cin(),

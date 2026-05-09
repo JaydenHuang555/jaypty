@@ -13,7 +13,7 @@ use jaysync::io::{
     ReadEventCapture, WriteEventCapture, WriteEvents,
     nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
 };
-use ptywin::contpy::ContpyIO;
+use ptywin::contpy::ContpySpawn;
 
 pub fn main() {
     let mut b = Builder::new();
@@ -29,7 +29,7 @@ pub fn main() {
         },
         ..Default::default()
     };
-    let mut io = ContpyIO::new(settings);
+    let mut io = ContpySpawn::new(settings);
 
     let mut cin = NonBlockingPipeWriter::new(io.take_cin(), 1024);
 

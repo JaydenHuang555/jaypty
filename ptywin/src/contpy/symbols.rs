@@ -1,6 +1,8 @@
 use super::Error;
 use super::Result;
+use std::cell::OnceCell;
 use std::mem;
+use std::sync::OnceLock;
 
 use windows_sys::{
     Win32::{
@@ -50,13 +52,20 @@ pub struct ContpySymbols {
 
 unsafe impl Send for ContpySymbols {}
 
+pub static INSTANCE: OnceLock<ContpySymbols> = OnceLock::new();
+
 impl ContpySymbols {
+    #[inline]
+    pub unsafe fn instance() -> &'static Self {
+        INSTANCE.get_or_init(|| unsafe { Self::load().unwrap() })
+    }
+
     /// loads symbols from contpy.dll
     /// assuming it is in the same directory
     /// as the exectuable
     ///
     /// TODO: add support for when contpy.dll is not present
-    pub unsafe fn load() -> Result<ContpySymbols> {
+    unsafe fn load() -> Result<ContpySymbols> {
         type LoadedFn = unsafe extern "system" fn() -> isize;
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));

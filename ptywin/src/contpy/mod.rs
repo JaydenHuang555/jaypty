@@ -42,25 +42,24 @@ pub use error::Result;
 use crate::child::{ChildProcess, watchdog::ChildWatchDog};
 use crate::contpy::symbols::{ContpyHandle, ContpySymbols};
 
-pub struct ContpyIO {
+pub struct ContpySpawn {
     handle: ContpyHandle,
-    internal: ContpySymbols,
     cin: Option<AnonWrite>,
     cout: Option<AnonRead>,
     child: ChildProcess,
 }
 
-unsafe impl Send for ContpyIO {}
+unsafe impl Send for ContpySpawn {}
 
-impl Drop for ContpyIO {
+impl Drop for ContpySpawn {
     fn drop(&mut self) {
         unsafe {
-            self.internal.close(self.handle);
+            ContpySymbols::instance().close(self.handle);
         }
     }
 }
 
-impl ContpyIO {
+impl ContpySpawn {
     /// transfers the ownership of the cin writer
     pub fn take_cin(&mut self) -> AnonWrite {
         self.cin.take().unwrap()
@@ -77,11 +76,10 @@ impl ContpyIO {
     }
 }
 
-impl PseudoTerminalIO for ContpyIO {
+impl PseudoTerminalIO for ContpySpawn {
     fn new(options: jaypty::Options) -> Self {
         let dimensions = options.dimension;
-        let mut cwd = options.cwd;
-        let symbols = unsafe { ContpySymbols::load().unwrap() };
+        let symbols = unsafe { ContpySymbols::instance() };
         let mut pty_handle: ContpyHandle = 0;
 
         let (cout, pty_output) = miow::pipe::anonymous(0).unwrap();
@@ -104,59 +102,17 @@ impl PseudoTerminalIO for ContpyIO {
                 panic!()
             }
         }
-        let mut size: usize = 0;
         let mut si_ex: STARTUPINFOEXW = unsafe { mem::zeroed() };
         si_ex.StartupInfo.cb = mem::size_of::<STARTUPINFOEXW>() as u32;
         si_ex.StartupInfo.lpTitle = ptr::null_mut() as PWSTR;
         si_ex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-        unsafe {
-            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
-            let exit_stat =
-                InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size as *mut usize);
-            if exit_stat > 0 {
-                panic!("error, found exit code {}", exit_stat);
-            }
-        }
+        factory::factory_attributes(&pty_handle, &mut si_ex.lpAttributeList);
 
-        let mut attributes = vec![0u8; size].into_boxed_slice();
-        si_ex.lpAttributeList = attributes.as_mut_ptr() as _;
-
-        unsafe {
-            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
-            let exit_stat = InitializeProcThreadAttributeList(
-                si_ex.lpAttributeList,
-                1,
-                0,
-                &mut size as *mut usize,
-            );
-            if exit_stat <= 0 {
-                panic!("unable to init proc thread attribute");
-            }
-        }
-
-        unsafe {
-            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute
-            let exit_stat = UpdateProcThreadAttribute(
-                si_ex.lpAttributeList,
-                0,
-                PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE as usize,
-                pty_handle as *mut c_void,
-                size_of::<ContpyHandle>(),
-                ptr::null_mut(),
-                ptr::null_mut(),
-            );
-            if exit_stat <= 0 {
-                panic!(
-                    "error, unable to update thread attribute due to {}",
-                    exit_stat
-                )
-            }
-        }
-        let creation_flags = EXTENDED_STARTUPINFO_PRESENT;
+        let creation_flags = factory::CREATION_FLAGS;
         let cmdline = factory::resolve_cmd(options.cmd);
         let mut pi_client: PROCESS_INFORMATION = unsafe { mem::zeroed() };
-        let cwd = factory::resolve_cwd(cwd);
+        let cwd = factory::resolve_cwd(options.cwd);
         unsafe {
             // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
             let exit_stat = CreateProcessW(
@@ -176,9 +132,8 @@ impl PseudoTerminalIO for ContpyIO {
             }
         }
 
-        ContpyIO {
+        ContpySpawn {
             handle: pty_handle as ContpyHandle,
-            internal: symbols,
             cin: Some(cin),
             cout: Some(cout),
             child: ChildProcess::new(pi_client.hProcess),
