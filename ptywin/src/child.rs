@@ -13,8 +13,8 @@ use polling::{Event, PollMode, Poller};
 use windows_sys::Win32::{
     Foundation::{BOOLEAN, HANDLE},
     System::Threading::{
-        GetProcessId, INFINITE, RegisterWaitForSingleObject, UnregisterWait, WT_EXECUTEDEFAULT,
-        WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE,
+        ExitProcess, GetProcessId, INFINITE, RegisterWaitForSingleObject, TerminateProcess,
+        UnregisterWait, WT_EXECUTEDEFAULT, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE,
     },
 };
 
@@ -36,5 +36,11 @@ impl ChildProcess {
 
     pub fn child_handle(&self) -> *mut c_void {
         self.handle.load(Ordering::Relaxed)
+    }
+
+    pub fn kill(&self) {
+        unsafe {
+            TerminateProcess(self.handle.load(Ordering::Relaxed) as *mut c_void, 0);
+        }
     }
 }

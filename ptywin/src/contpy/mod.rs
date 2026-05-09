@@ -1,4 +1,5 @@
 pub mod error;
+pub mod factory;
 pub mod symbols;
 
 use jwinutil::sanitize_string;
@@ -21,7 +22,7 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use jaypty::PtySize;
+use jaypty::{PseudoTerminalIO, PtySize};
 use windows_sys::{
     Win32::{
         Foundation::HANDLE,
@@ -60,26 +61,38 @@ impl Drop for ContpyIO {
 }
 
 impl ContpyIO {
-    pub fn new(dimensions: PtySize) -> ContpyIO {
-        let internal = unsafe { ContpySymbols::load().unwrap() };
+    /// transfers the ownership of the cin writer
+    pub fn take_cin(&mut self) -> AnonWrite {
+        self.cin.take().unwrap()
+    }
+
+    /// transfers the ownership of the cout reader
+    pub fn take_cout(&mut self) -> AnonRead {
+        self.cout.take().unwrap()
+    }
+
+    pub fn spawn_child_watchdog(&self) -> ChildWatchDog {
+        let watchdog = ChildWatchDog::new(&self.child);
+        watchdog
+    }
+}
+
+impl PseudoTerminalIO for ContpyIO {
+    fn new(options: jaypty::Options) -> Self {
+        let dimensions = options.dimension;
+        let mut cwd = options.cwd;
+        let symbols = unsafe { ContpySymbols::load().unwrap() };
         let mut pty_handle: ContpyHandle = 0;
 
-        // open a pipe for writing
-        // the connect_output is our reader for the terminal
-        // pty_output is the actual writer writing to pty
         let (cout, pty_output) = miow::pipe::anonymous(0).unwrap();
 
-        // open a pipe for reading
-        // the pty input is the reader of the output
-        // that is provided by the
-        // connected input
         let (pty_input, cin) = miow::pipe::anonymous(0).unwrap();
         let size = COORD {
             X: dimensions.columns as i16,
             Y: dimensions.rows as i16,
         };
         unsafe {
-            if let result = internal.create(
+            if let result = symbols.create(
                 size,
                 pty_input.into_raw_handle() as HANDLE,
                 pty_output.into_raw_handle() as HANDLE,
@@ -141,9 +154,9 @@ impl ContpyIO {
             }
         }
         let creation_flags = EXTENDED_STARTUPINFO_PRESENT;
-        let cmdline = sanitize_string(&"powershell.exe");
+        let cmdline = factory::resolve_cmd(options.cmd);
         let mut pi_client: PROCESS_INFORMATION = unsafe { mem::zeroed() };
-        let cwd = sanitize_string(&"C:\\Users\\Jshizzle");
+        let cwd = factory::resolve_cwd(cwd);
         unsafe {
             // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
             let exit_stat = CreateProcessW(
@@ -153,7 +166,7 @@ impl ContpyIO {
                 ptr::null_mut(),
                 false as i32,
                 creation_flags,
-                ptr::null_mut() as *const c_void,
+                cwd,
                 ptr::null(),
                 &mut si_ex.StartupInfo as *mut STARTUPINFOW,
                 &mut pi_client as *mut PROCESS_INFORMATION,
@@ -165,25 +178,10 @@ impl ContpyIO {
 
         ContpyIO {
             handle: pty_handle as ContpyHandle,
-            internal,
+            internal: symbols,
             cin: Some(cin),
             cout: Some(cout),
             child: ChildProcess::new(pi_client.hProcess),
         }
-    }
-
-    /// transfers the ownership of the cin writer
-    pub fn take_cin(&mut self) -> AnonWrite {
-        self.cin.take().unwrap()
-    }
-
-    /// transfers the ownership of the cout reader
-    pub fn take_cout(&mut self) -> AnonRead {
-        self.cout.take().unwrap()
-    }
-
-    pub fn spawn_child_watchdog(&self) -> ChildWatchDog {
-        let watchdog = ChildWatchDog::new(&self.child);
-        watchdog
     }
 }

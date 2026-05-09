@@ -1,16 +1,19 @@
 pub mod child;
 pub mod contpy;
+#[cfg(not(windows))]
+compile_error!("PLEASE COMPILE ON WINDOWS!");
 
 #[cfg(test)]
 mod tests {
     use std::{
         io::Write,
+        path::PathBuf,
         sync::mpsc::{self, Receiver, Sender},
         thread,
         time::Duration,
     };
 
-    use jaypty::{PtySize, event::EventKind};
+    use jaypty::{Options, PseudoTerminalIO, PtySize, event::EventKind};
     use jaysync::io::{
         ReadEventCapture, WriteEventCapture, WriteEvents,
         nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
@@ -20,10 +23,17 @@ mod tests {
 
     #[test]
     fn blocking() {
-        let mut io = ContpyIO::new(PtySize {
-            columns: 24,
-            rows: 80,
-        });
+        let mut path = PathBuf::new();
+        path.push("C:\\");
+        let settings = Options {
+            dimension: PtySize {
+                columns: 24,
+                rows: 80,
+            },
+            cwd: Some(path),
+            ..Default::default()
+        };
+        let mut io = ContpyIO::new(settings);
         let (tx, rx): (Sender<EventKind>, Receiver<EventKind>) = mpsc::channel();
         let cin_capture = WriteEventCapture::new(
             io.take_cin(),

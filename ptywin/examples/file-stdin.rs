@@ -1,13 +1,14 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader, ErrorKind, Read, Write},
+    path::PathBuf,
     sync::mpsc,
     thread,
     time::Duration,
 };
 
 use env_logger::Builder;
-use jaypty::{PtySize, event::EventKind};
+use jaypty::{Options, PseudoTerminalIO, PtySize, event::EventKind};
 use jaysync::io::{
     ReadEventCapture, WriteEventCapture, WriteEvents,
     nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
@@ -18,10 +19,17 @@ pub fn main() {
     let mut b = Builder::new();
     b.filter_level(log::LevelFilter::Info);
     b.init();
-    let mut io = ContpyIO::new(PtySize {
-        columns: 24,
-        rows: 80,
-    });
+
+    let mut path = PathBuf::new();
+    path.push("C:\\");
+    let settings = Options {
+        dimension: PtySize {
+            columns: 24,
+            rows: 80,
+        },
+        ..Default::default()
+    };
+    let mut io = ContpyIO::new(settings);
 
     let mut cin = NonBlockingPipeWriter::new(io.take_cin(), 1024);
 
