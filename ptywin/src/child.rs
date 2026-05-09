@@ -1,6 +1,6 @@
 use std::{
+    ffi::c_void,
     num::NonZeroU32,
-    os::raw::c_void,
     ptr,
     sync::{
         Arc, Mutex,
@@ -18,22 +18,40 @@ use windows_sys::Win32::{
     },
 };
 
-use crate::pipe::{ScheduledEvent, Task};
+pub mod watchdog;
+
+pub struct ChildProcess {
+    pid: Option<NonZeroU32>,
+    handle: AtomicPtr<c_void>,
+}
+
+impl ChildProcess {
+    pub fn new(handle: HANDLE) -> Self {
+        let pid = unsafe { NonZeroU32::new(GetProcessId(handle)) };
+        Self {
+            pid,
+            handle: AtomicPtr::from(handle),
+        }
+    }
+
+    pub fn child_handle(&self) -> *mut c_void {
+        self.handle.load(Ordering::Relaxed)
+    }
+}
 
 extern "system" fn child_exit_callback(context: *mut c_void, timed_out: BOOLEAN) {
-    // if timed_out != 0 {
-    //     return;
-    // }
-    println!("child exit callback");
-    let event: Box<_> = unsafe { Box::from_raw(context as *mut ChildExitEvent) };
+    if timed_out != 0 {
+        return;
+    }
+    let event: Box<_> = unsafe { Box::from_raw(context as *mut ChildExitCallback) };
     event.sender.send(false).ok();
 }
 
-struct ChildExitEvent {
+struct ChildExitCallback {
     sender: Sender<bool>,
 }
 
-pub struct ChildExitWatchDog {
+pub struct ChildWatchDog {
     wait_handle: AtomicPtr<c_void>,
     child_handle: AtomicPtr<c_void>,
     pid: Option<NonZeroU32>,
@@ -41,7 +59,7 @@ pub struct ChildExitWatchDog {
     reciever: Arc<Mutex<Receiver<bool>>>,
 }
 
-impl Drop for ChildExitWatchDog {
+impl Drop for ChildWatchDog {
     fn drop(&mut self) {
         unsafe {
             UnregisterWait(self.wait_handle.load(Ordering::Relaxed) as HANDLE);
@@ -49,12 +67,12 @@ impl Drop for ChildExitWatchDog {
     }
 }
 
-impl ChildExitWatchDog {
+impl ChildWatchDog {
     pub fn new(child: HANDLE) -> Self {
         let (event_tx, event_rx) = std::sync::mpsc::channel();
 
         let mut wait_handle = ptr::null_mut();
-        let exit_ref = Box::new(ChildExitEvent { sender: event_tx });
+        let exit_ref = Box::new(ChildExitCallback { sender: event_tx });
         unsafe {
             let stat = RegisterWaitForSingleObject(
                 &mut wait_handle,

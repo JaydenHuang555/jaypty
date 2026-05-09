@@ -38,11 +38,10 @@ pub use error::Error;
 pub use error::ErrorKind;
 pub use error::Result;
 
-use crate::pipe::ScheduledEvent;
+use crate::child::ChildProcess;
 use crate::{
-    child::ChildExitWatchDog,
+    child::ChildWatchDog,
     contpy::internal::{ContpyHandle, ContpyInternal},
-    pipe::{input::NonBlockingPipeWriter, output::NonBlockingPipeReader},
 };
 
 pub struct ContpyIO {
@@ -50,7 +49,7 @@ pub struct ContpyIO {
     internal: ContpyInternal,
     cin: Option<AnonWrite>,
     cout: Option<AnonRead>,
-    child_exit_watchdog: Arc<RwLock<ChildExitWatchDog>>,
+    child: ChildProcess,
 }
 
 unsafe impl Send for ContpyIO {}
@@ -164,32 +163,8 @@ impl ContpyIO {
             internal,
             cin: Some(cin),
             cout: Some(cout),
-            child_exit_watchdog: Arc::new(RwLock::new(ChildExitWatchDog::new(pi_client.hProcess))),
+            child: ChildProcess::new(pi_client.hProcess),
         }
-    }
-
-    pub fn update_child_alive(&mut self) -> bool {
-        self.child_exit_watchdog
-            .write()
-            .unwrap()
-            .update_child_running()
-    }
-
-    pub fn wait(&mut self) {
-        loop {
-            let stat = self
-                .child_exit_watchdog
-                .write()
-                .unwrap()
-                .update_child_running();
-            if !stat {
-                break;
-            }
-        }
-    }
-
-    pub fn child_watch_dog(&mut self) -> &mut Arc<RwLock<ChildExitWatchDog>> {
-        &mut self.child_exit_watchdog
     }
 
     pub fn take_cin(&mut self) -> AnonWrite {
