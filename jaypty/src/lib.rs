@@ -3,7 +3,7 @@ pub mod io;
 pub mod pipe;
 pub mod tokens;
 
-pub use io::JayPtyIO;
+pub use io::PseudoTerminalIO;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PtySize {

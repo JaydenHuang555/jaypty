@@ -1,5 +1,5 @@
 pub mod error;
-pub mod internal;
+pub mod symbols;
 
 use jwinutil::sanitize_string;
 use miow::pipe::{AnonRead, AnonWrite};
@@ -39,11 +39,11 @@ pub use error::ErrorKind;
 pub use error::Result;
 
 use crate::child::{ChildProcess, watchdog::ChildWatchDog};
-use crate::contpy::internal::{ContpyHandle, ContpyInternal};
+use crate::contpy::symbols::{ContpyHandle, ContpySymbols};
 
 pub struct ContpyIO {
     handle: ContpyHandle,
-    internal: ContpyInternal,
+    internal: ContpySymbols,
     cin: Option<AnonWrite>,
     cout: Option<AnonRead>,
     child: ChildProcess,
@@ -61,7 +61,7 @@ impl Drop for ContpyIO {
 
 impl ContpyIO {
     pub fn new(dimensions: PtySize) -> ContpyIO {
-        let internal = unsafe { ContpyInternal::load().unwrap() };
+        let internal = unsafe { ContpySymbols::load().unwrap() };
         let mut pty_handle: ContpyHandle = 0;
 
         // open a pipe for writing
@@ -172,10 +172,12 @@ impl ContpyIO {
         }
     }
 
+    /// transfers the ownership of the cin writer
     pub fn take_cin(&mut self) -> AnonWrite {
         self.cin.take().unwrap()
     }
 
+    /// transfers the ownership of the cout reader
     pub fn take_cout(&mut self) -> AnonRead {
         self.cout.take().unwrap()
     }

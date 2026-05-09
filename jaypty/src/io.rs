@@ -1,1 +1,1 @@
-pub trait JayPtyIO {}
+pub trait PseudoTerminalIO {}

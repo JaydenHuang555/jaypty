@@ -41,22 +41,22 @@ type ResizePseudoConsoleFn = unsafe extern "system" fn(HPCON, COORD) -> HRESULT;
 
 type ClosePseudoConsoleFn = unsafe extern "system" fn(HPCON);
 
-/// layer between windows and this api
-pub struct ContpyInternal {
+/// util for api lib symbols
+pub struct ContpySymbols {
     create: CreatePseudoConsoleFn,
     resize: ResizePseudoConsoleFn,
     close: ClosePseudoConsoleFn,
 }
 
-unsafe impl Send for ContpyInternal {}
+unsafe impl Send for ContpySymbols {}
 
-impl ContpyInternal {
+impl ContpySymbols {
     /// loads symbols from contpy.dll
     /// assuming it is in the same directory
     /// as the exectuable
     ///
     /// TODO: add support for when contpy.dll is not present
-    pub unsafe fn load() -> Result<ContpyInternal> {
+    pub unsafe fn load() -> Result<ContpySymbols> {
         type LoadedFn = unsafe extern "system" fn() -> isize;
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));
@@ -84,14 +84,14 @@ impl ContpyInternal {
         flags: u32,
         reference: *mut HPCON,
     ) -> HRESULT {
-        (self.create)(size, input_handle, output_handle, flags, reference)
+        unsafe { (self.create)(size, input_handle, output_handle, flags, reference) }
     }
 
     pub unsafe fn resize(&self, session: ContpyHandle, size: COORD) -> HRESULT {
-        (self.resize)(session, size)
+        unsafe { (self.resize)(session, size) }
     }
 
     pub unsafe fn close(&self, session: ContpyHandle) {
-        (self.close)(session)
+        unsafe { (self.close)(session) }
     }
 }
