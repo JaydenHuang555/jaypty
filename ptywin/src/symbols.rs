@@ -1,3 +1,5 @@
+use crate::error::ErrorKind;
+
 use super::Error;
 use super::Result;
 use std::mem;
@@ -88,7 +90,9 @@ impl ContpySymbols {
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));
             if hmodule.is_null() {
-                return Error::load_err("unable to load contpy.dll").into();
+                return Error::from(ErrorKind::LoadErrKind)
+                    .context("unable to load contpy.dll")
+                    .into();
             }
             let create = GetProcAddress(hmodule, s!("CreatePseudoConsole")).unwrap();
             let resize = GetProcAddress(hmodule, s!("ResizePseudoConsole")).unwrap();
