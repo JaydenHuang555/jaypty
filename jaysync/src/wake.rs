@@ -1,5 +1,6 @@
 use std::{sync::mpsc::Sender, task::Wake, thread};
 
+/// waker that unparks a given thread
 pub struct ThreadWaker(pub thread::Thread);
 
 impl Wake for ThreadWaker {
@@ -12,6 +13,8 @@ impl Wake for ThreadWaker {
     }
 }
 
+/// waker that sends a certain event over mpsc
+/// when it wakes up
 pub struct EventSenderWaker<Event: Clone> {
     sender: Sender<Event>,
     event: Event,

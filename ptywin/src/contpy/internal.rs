@@ -51,7 +51,12 @@ pub struct ContpyInternal {
 unsafe impl Send for ContpyInternal {}
 
 impl ContpyInternal {
-    pub fn load() -> Result<ContpyInternal> {
+    /// loads symbols from contpy.dll
+    /// assuming it is in the same directory
+    /// as the exectuable
+    ///
+    /// TODO: add support for when contpy.dll is not present
+    pub unsafe fn load() -> Result<ContpyInternal> {
         type LoadedFn = unsafe extern "system" fn() -> isize;
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));
@@ -71,7 +76,7 @@ impl ContpyInternal {
         }
     }
 
-    pub fn create(
+    pub unsafe fn create(
         &self,
         size: COORD,
         input_handle: HANDLE,
@@ -79,14 +84,14 @@ impl ContpyInternal {
         flags: u32,
         reference: *mut HPCON,
     ) -> HRESULT {
-        unsafe { (self.create)(size, input_handle, output_handle, flags, reference) }
+        (self.create)(size, input_handle, output_handle, flags, reference)
     }
 
-    pub fn resize(&self, session: ContpyHandle, size: COORD) -> HRESULT {
-        unsafe { (self.resize)(session, size) }
+    pub unsafe fn resize(&self, session: ContpyHandle, size: COORD) -> HRESULT {
+        (self.resize)(session, size)
     }
 
-    pub fn close(&self, session: ContpyHandle) {
-        unsafe { (self.close)(session) }
+    pub unsafe fn close(&self, session: ContpyHandle) {
+        (self.close)(session)
     }
 }

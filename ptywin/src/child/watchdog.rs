@@ -49,6 +49,7 @@ pub struct ChildWatchDog {
 impl Drop for ChildWatchDog {
     fn drop(&mut self) {
         unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-unregisterwait
             UnregisterWait(self.wait_handle.load(Ordering::Relaxed) as HANDLE);
         }
     }
@@ -59,15 +60,13 @@ impl ChildWatchDog {
         let (tx, rx) = std::sync::mpsc::channel();
         let child = process_child.child_handle();
 
-        let poller = Arc::new(Poller::new().unwrap());
-        let exit_ref_poller = Arc::clone(&poller);
-
         let mut wait_handle = ptr::null_mut();
         let exit_ref = Box::new(ChildExitCallback {
             sender: tx,
             handle: AtomicPtr::from(process_child.child_handle()),
         });
         unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-registerwaitforsingleobject
             let stat = RegisterWaitForSingleObject(
                 &mut wait_handle,
                 child,

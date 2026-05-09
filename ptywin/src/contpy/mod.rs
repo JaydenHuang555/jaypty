@@ -53,13 +53,15 @@ unsafe impl Send for ContpyIO {}
 
 impl Drop for ContpyIO {
     fn drop(&mut self) {
-        self.internal.close(self.handle);
+        unsafe {
+            self.internal.close(self.handle);
+        }
     }
 }
 
 impl ContpyIO {
     pub fn new(dimensions: PtySize) -> ContpyIO {
-        let internal = ContpyInternal::load().unwrap();
+        let internal = unsafe { ContpyInternal::load().unwrap() };
         let mut pty_handle: ContpyHandle = 0;
 
         // open a pipe for writing
@@ -76,16 +78,18 @@ impl ContpyIO {
             X: dimensions.columns as i16,
             Y: dimensions.rows as i16,
         };
-        if let result = internal.create(
-            size,
-            pty_input.into_raw_handle() as HANDLE,
-            pty_output.into_raw_handle() as HANDLE,
-            0,
-            &mut pty_handle as *mut _,
-        ) && result != S_OK
-        {
-            log::error!("unable to create handle");
-            panic!()
+        unsafe {
+            if let result = internal.create(
+                size,
+                pty_input.into_raw_handle() as HANDLE,
+                pty_output.into_raw_handle() as HANDLE,
+                0,
+                &mut pty_handle as *mut _,
+            ) && result != S_OK
+            {
+                log::error!("unable to create handle");
+                panic!()
+            }
         }
         let mut size: usize = 0;
         let mut si_ex: STARTUPINFOEXW = unsafe { mem::zeroed() };
@@ -94,6 +98,7 @@ impl ContpyIO {
         si_ex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
         unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
             let exit_stat =
                 InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size as *mut usize);
             if exit_stat > 0 {
@@ -105,6 +110,7 @@ impl ContpyIO {
         si_ex.lpAttributeList = attributes.as_mut_ptr() as _;
 
         unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-initializeprocthreadattributelist
             let exit_stat = InitializeProcThreadAttributeList(
                 si_ex.lpAttributeList,
                 1,
@@ -117,6 +123,7 @@ impl ContpyIO {
         }
 
         unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute
             let exit_stat = UpdateProcThreadAttribute(
                 si_ex.lpAttributeList,
                 0,
@@ -138,6 +145,7 @@ impl ContpyIO {
         let mut pi_client: PROCESS_INFORMATION = unsafe { mem::zeroed() };
         let cwd = sanitize_string(&"C:\\Users\\Jshizzle");
         unsafe {
+            // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
             let exit_stat = CreateProcessW(
                 ptr::null(),
                 cmdline.as_ptr() as PWSTR,
