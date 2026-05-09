@@ -10,12 +10,10 @@ use env_logger::Builder;
 use jaypty::PtySize;
 use jaypty::event::EventKind;
 use jaypty::tokens::{PtyTokens, TOKEN_READ, TOKEN_WRITE};
+use jaysync::io::nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter};
 use jaysync::io::{ReadEventCapture, WriteEventCapture, WriteEvents};
 use polling::{Event, Events, PollMode, Poller};
 use ptywin::contpy::ContpyIO;
-use ptywin::pipe::ScheduledEvent;
-use ptywin::pipe::input::NonBlockingPipeWriter;
-use ptywin::pipe::output::NonBlockingPipeReader;
 use windows_sys::Win32::System::Console::{ATTACH_PARENT_PROCESS, AttachConsole, FreeConsole};
 
 #[derive(Clone, Debug)]
@@ -32,13 +30,10 @@ pub fn main() {
         rows: 80,
     });
     let (tx, rx) = mpsc::channel();
-    let cout = ReadEventCapture::new(
-        NonBlockingPipeReader::new(io.take_cout(), 1024),
-        tx.clone(),
-        EventKind::CoutRead,
-    );
-    let mut cin = WriteEventCapture::new(
-        NonBlockingPipeWriter::new(io.take_cin(), 1024),
+
+    let cout_capture = ReadEventCapture::new(io.take_cout(), tx.clone(), EventKind::CoutRead);
+    let cin_capture = WriteEventCapture::new(
+        io.take_cin(),
         tx.clone(),
         WriteEvents {
             write_event: Some(EventKind::CinWrite),
@@ -46,10 +41,33 @@ pub fn main() {
         },
     );
 
+    let mut cout = NonBlockingPipeReader::new(cout_capture, 1024);
+    let mut cin = NonBlockingPipeWriter::new(cin_capture, 1024);
+
     thread::spawn(move || {
+        let mut relay = BufWriter::new(File::create("RELAY").unwrap());
         loop {
-            let rec = rx.recv().unwrap();
+            let rec: EventKind = rx.recv().unwrap();
             log::info!("found event: {:?}", rec);
+
+            if rec == EventKind::CoutRead {
+                let mut buff = [0u8; 512];
+                loop {
+                    match cout.read(&mut buff) {
+                        Ok(count) => {
+                            if count == 0 {
+                                break;
+                            }
+                            relay.write(&buff[..count]).unwrap();
+                            relay.flush().unwrap();
+                        }
+                        Err(e) => {
+                            log::error!("error when reading from cout {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
         }
     });
 
