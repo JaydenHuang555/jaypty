@@ -2,6 +2,7 @@ pub mod command;
 pub mod event;
 pub mod io;
 pub mod pipe;
+pub mod subsystem;
 pub mod tokens;
 
 use std::path::PathBuf;

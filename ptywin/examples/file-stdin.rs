@@ -29,7 +29,7 @@ pub fn main() {
         },
         ..Default::default()
     };
-    let mut io = ContpySpawn::new(settings);
+    let mut io = ContpySpawn::spawn(settings);
 
     let mut cin = NonBlockingPipeWriter::new(io.take_cin(), 1024);
 

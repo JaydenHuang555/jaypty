@@ -1,5 +1,6 @@
 pub mod error;
 pub mod factory;
+pub mod io;
 pub mod symbols;
 
 use jwinutil::sanitize_string;
@@ -39,25 +40,27 @@ pub use error::Error;
 pub use error::ErrorKind;
 pub use error::Result;
 
-use crate::child::{ChildProcess, watchdog::ChildWatchDog};
-use crate::contpy::symbols::{ContpyHandle, ContpySymbols};
+pub(crate) use symbols::ContpyHandle;
+pub(crate) use symbols::ContpySymbols;
+pub(crate) use symbols::loaded_symbols;
 
+use crate::child::ChildProcess;
+
+/// just a helper storage struct
+/// of the outputs when creating a
+/// contpy instance
 pub struct ContpySpawn {
-    handle: ContpyHandle,
-    cin: Option<AnonWrite>,
-    cout: Option<AnonRead>,
-    child: ChildProcess,
+    /// internal windows handle
+    pub handle: Option<ContpyHandle>,
+    /// writer to cin
+    pub cin: Option<AnonWrite>,
+    /// reader to cout
+    pub cout: Option<AnonRead>,
+    /// child process
+    pub child: Option<ChildProcess>,
 }
 
 unsafe impl Send for ContpySpawn {}
-
-impl Drop for ContpySpawn {
-    fn drop(&mut self) {
-        unsafe {
-            ContpySymbols::instance().close(self.handle);
-        }
-    }
-}
 
 impl ContpySpawn {
     /// transfers the ownership of the cin writer
@@ -70,14 +73,7 @@ impl ContpySpawn {
         self.cout.take().unwrap()
     }
 
-    pub fn spawn_child_watchdog(&self) -> ChildWatchDog {
-        let watchdog = ChildWatchDog::new(&self.child);
-        watchdog
-    }
-}
-
-impl PseudoTerminalIO for ContpySpawn {
-    fn new(options: jaypty::Options) -> Self {
+    pub fn spawn(options: jaypty::Options) -> Self {
         let dimensions = options.dimension;
         let symbols = unsafe { ContpySymbols::instance() };
         let mut pty_handle: ContpyHandle = 0;
@@ -133,10 +129,10 @@ impl PseudoTerminalIO for ContpySpawn {
         }
 
         ContpySpawn {
-            handle: pty_handle as ContpyHandle,
+            handle: Some(pty_handle as ContpyHandle),
             cin: Some(cin),
             cout: Some(cout),
-            child: ChildProcess::new(pi_client.hProcess),
+            child: Some(ChildProcess::new(pi_client.hProcess)),
         }
     }
 }

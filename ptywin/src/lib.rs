@@ -33,7 +33,7 @@ mod tests {
             cwd: Some(path),
             ..Default::default()
         };
-        let mut io = ContpySpawn::new(settings);
+        let mut io = ContpySpawn::spawn(settings);
         let (tx, rx): (Sender<EventKind>, Receiver<EventKind>) = mpsc::channel();
         let cin_capture = WriteEventCapture::new(
             io.take_cin(),
