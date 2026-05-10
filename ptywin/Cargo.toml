@@ -13,10 +13,10 @@ miow = "0.6.1"
 piper = "0.2.5"
 polling = "3.11.0"
 thiserror = "2.0.18"
+jaypty_core = {version = "0.0.1", path = "../core"}
 jaysync = {version = "0.0.1", path = "../jaysync"}
 env_logger = "0.11.10"
 winpipe = {verion = "0.0.1", path = "../winpipe", features = ["polling"]}
-jaypty_core = {verion = "0.0.1"}
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59.0", features = [
