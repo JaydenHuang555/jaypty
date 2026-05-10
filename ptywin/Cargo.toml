@@ -1,6 +1,8 @@
 [package]
 name = "ptywin"
 version = "0.0.1"
+description = "interface between contpy implementing the PseudoTerminal trait found in jaypty"
+license = "MIT"
 edition = "2024"
 
 [dependencies.winpipe]
