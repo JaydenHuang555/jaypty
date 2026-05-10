@@ -216,6 +216,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jwinpipe"
+version = "0.0.1"
+dependencies = [
+ "jaysync",
+ "miow",
+ "piper",
+ "polling",
+]
+
+[[package]]
 name = "jwinutil"
 version = "0.1.0"
 dependencies = [
@@ -335,6 +345,7 @@ dependencies = [
  "env_logger",
  "jaypty_core",
  "jaysync",
+ "jwinpipe",
  "log",
  "mio",
  "miow",
@@ -342,7 +353,6 @@ dependencies = [
  "polling",
  "thiserror",
  "windows-sys 0.59.0",
- "winpipe",
 ]
 
 [[package]]
@@ -573,13 +583,3 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
-
-[[package]]
-name = "winpipe"
-version = "0.0.1"
-dependencies = [
- "jaysync",
- "miow",
- "piper",
- "polling",
-]

@@ -9,10 +9,10 @@ use std::{
 };
 
 use jaypty_core::{Options, PseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
+use jwinpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 use miow::pipe::AnonRead;
 use polling::Event;
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
-use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 
 use super::ContpyHandle;
 use crate::factory::ContpySpawn;

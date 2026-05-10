@@ -16,7 +16,7 @@ thiserror = "2.0.18"
 jaypty_core = {version = "0.0.1", path = "../core"}
 jaysync = {version = "0.0.1", path = "../jaysync"}
 env_logger = "0.11.10"
-winpipe = {version = "0.0.1", path = "../winpipe", features = ["polling"]}
+jwinpipe = {version = "0.0.1", path = "../winpipe", features = ["polling"]}
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59.0", features = [

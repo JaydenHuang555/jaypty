@@ -1,6 +1,8 @@
 [package]
 name = "jaypty"
 version = "0.0.1"
+description = "cross platform pty interface. currently in WIP so as of now (5/10/26), it only supports Windows 10 + Windows 11"
+license = "MIT"
 edition = "2024"
 
 

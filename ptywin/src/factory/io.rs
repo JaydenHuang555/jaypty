@@ -1,6 +1,6 @@
 use jaysync::io::waking::{WakingNonBlockingPipeReader, WakingNonBlockingPipeWriter};
+use jwinpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 use miow::pipe::{AnonRead, AnonWrite};
-use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 
 use super::ContpySpawn;
 use crate::RegisteredPoll;

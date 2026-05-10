@@ -1,12 +1,14 @@
 [package]
-name = "winpipe"
+name = "jwinpipe"
 version = "0.0.1"
+description = "pipe io async and sync operations (currently in WIP so it just contains some async)"
+license = "MIT"
 edition = "2024"
 
 [dependencies]
 piper = "0.2.5"
 polling = "3.11.0"
-jaysync = {path = "../jaysync"}
+jaysync = {version = "0.0.1", path = "../jaysync"}
 miow = "0.6.1"
 
 [features]
