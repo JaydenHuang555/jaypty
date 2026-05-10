@@ -1,10 +1,6 @@
 use std::{
     ops::Add,
-    sync::{
-        Arc, Mutex, RwLock,
-        atomic::AtomicBool,
-        mpsc::{self, Receiver, Sender},
-    },
+    sync::{Arc, Mutex, atomic::AtomicBool, mpsc::Sender},
     task::Wake,
     thread::JoinHandle,
     time::{Duration, Instant},
