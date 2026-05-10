@@ -1,20 +1,22 @@
-use std::{
-    sync::{Arc, RwLock, mpsc::Sender},
-    thread::{self, JoinHandle},
-    time::Duration,
-};
-
-use polling::{
-    Poller,
-    os::iocp::{CompletionPacket, PollerIocpExt},
-};
-
+#[cfg(windows)]
 pub mod capture;
+#[cfg(windows)]
 pub mod io;
+#[cfg(windows)]
 pub mod mpsc;
+#[cfg(windows)]
 pub mod notifier;
+#[cfg(windows)]
 pub mod queue;
+#[cfg(windows)]
 pub mod wake;
+
+use polling::Poller;
+use std::sync::Arc;
+use std::sync::mpsc::Sender;
+use std::thread;
+use std::thread::JoinHandle;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct EventSender<E> {

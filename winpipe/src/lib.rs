@@ -1,2 +1,2 @@
-#[cfg(feature = "polling")]
+#[cfg(all(feature = "polling", windows))]
 pub mod polling;

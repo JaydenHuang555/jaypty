@@ -17,3 +17,4 @@ ptywin = {version = "0.0.1", path = "../ptywin"}
 [features]
 default = []
 win = []
+unix = []
