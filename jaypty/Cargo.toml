@@ -5,7 +5,7 @@ edition = "2024"
 
 
 [dependencies]
-jaypty_core = {version = "0.0.1", path = "../core"}
+jaypty_core = {path = "../core", version = "0.0.1", }
 polling = "3.11.0"
 
 
