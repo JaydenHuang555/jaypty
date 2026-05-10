@@ -66,3 +66,38 @@ impl Wake for RegisteredPoll {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        sync::Arc,
+        task::Waker,
+        time::{Duration, Instant},
+    };
+
+    use polling::{Event, Events, Poller};
+
+    use crate::polling::{Polled, RegisteredPoll};
+
+    #[test]
+    fn wakey_poll_test() {
+        const SENT_EVENT: Event = Event::readable(0);
+        const TIMEOUT: Duration = Duration::from_millis(200);
+
+        let poller = Arc::new(Poller::new().expect("failed to create poller"));
+        let poll = Arc::new(RegisteredPoll::default());
+        {
+            let mut lock = poll.polled.lock().unwrap();
+            *lock = Some(Polled::new(&poller, SENT_EVENT, None));
+            drop(lock)
+        }
+
+        let waker = Waker::from(poll);
+        waker.wake();
+        let mut events = Events::new();
+        poller
+            .wait_deadline(&mut events, Instant::now() + TIMEOUT)
+            .unwrap();
+        assert_eq!(events.iter().next().unwrap(), SENT_EVENT)
+    }
+}

@@ -7,3 +7,4 @@ edition = "2024"
 piper = "0.2.5"
 polling = "3.11.0"
 jaysync = {path = "../jaysync"}
+miow = "0.6.1"

@@ -580,6 +580,7 @@ name = "winpipe"
 version = "0.1.0"
 dependencies = [
  "jaysync",
+ "miow",
  "piper",
  "polling",
 ]

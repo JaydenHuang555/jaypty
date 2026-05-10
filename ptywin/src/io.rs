@@ -9,6 +9,7 @@ use std::{
 };
 
 use jaypty_core::{Options, PseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
+use miow::pipe::AnonRead;
 use polling::Event;
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
@@ -75,13 +76,7 @@ impl UnsafePseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
     }
 }
 
-impl
-    PseudoTerminalIO<
-        PollingWakingNonBlockingPipeReader,
-        PollingWakingNonBlockingPipeWriter,
-        WinChildWatchdogIO,
-    > for ContpyPseudoTerminalIO
-{
+impl PseudoTerminalIO<R, W, WinChildWatchdogIO> for ContpyPseudoTerminalIO {
     fn new(options: jaypty_core::Options) -> Self {
         let mut spawn = ContpySpawn::spawn(options);
         let child_handle = factory::watch(&mut spawn);
@@ -122,11 +117,11 @@ impl
         Ok(())
     }
 
-    fn cin(&mut self) -> &mut PollingWakingNonBlockingPipeWriter {
+    fn cin(&mut self) -> &mut W {
         &mut self.cin
     }
 
-    fn cout(&mut self) -> &mut PollingWakingNonBlockingPipeReader {
+    fn cout(&mut self) -> &mut R {
         &mut self.cout
     }
 }

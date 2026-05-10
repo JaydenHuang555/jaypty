@@ -6,14 +6,16 @@ use std::{
     io::{BufReader, ErrorKind, Read, Write},
     sync::{Arc, Mutex},
     thread,
-    time::Duration,
 };
 
 use jaypty::{
     Options, Poller, PseudoTerminalIO, SystemPseudoTerminalIO, UnsafePseudoTerminalRegisterIO,
 };
 
+const RELAY_FNAME: &'static str = "RELAY";
+
 pub fn main() {
+    File::create(RELAY_FNAME).unwrap();
     let io = Arc::new(Mutex::new(SystemPseudoTerminalIO::new(Options::default())));
     let mut watch_dog = {
         let lock = io.lock().unwrap();
@@ -27,7 +29,7 @@ pub fn main() {
 
     let io_writer = Arc::clone(&io);
     thread::spawn(move || {
-        let mut reader = BufReader::new(File::open("RELAY").unwrap());
+        let mut reader = BufReader::new(File::open(RELAY_FNAME).unwrap());
         loop {
             let mut buff = [0u8; 512];
             loop {

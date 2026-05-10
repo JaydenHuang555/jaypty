@@ -1,11 +1,12 @@
 use jaysync::io::waking::{WakingNonBlockingPipeReader, WakingNonBlockingPipeWriter};
+use miow::pipe::{AnonRead, AnonWrite};
 use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 
 use super::ContpySpawn;
 use crate::RegisteredPoll;
 
-pub(crate) type W = PollingWakingNonBlockingPipeWriter;
-pub(crate) type R = PollingWakingNonBlockingPipeReader;
+pub(crate) type W = PollingWakingNonBlockingPipeWriter<AnonWrite>;
+pub(crate) type R = PollingWakingNonBlockingPipeReader<AnonRead>;
 
 const PIPE_CAPTICITY: usize = 1024;
 

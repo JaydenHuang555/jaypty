@@ -1,5 +1,6 @@
 use std::{
     io::{ErrorKind, Read},
+    marker::PhantomData,
     sync::Arc,
     task::{Context, Poll, Waker},
     thread::{self, JoinHandle},
@@ -16,7 +17,7 @@ use crate::polling::{Polled, RegisteredPoll};
 
 /// An asynchronous reader that writes the source
 /// to an internal buffer on a seperate thread
-pub struct PollingWakingNonBlockingPipeReader {
+pub struct PollingWakingNonBlockingPipeReader<R: Read> {
     /// This is the pipe reader.
     /// The pipe is the buffer that holds the actual read data
     /// and is updated on a seperate thread
@@ -24,10 +25,15 @@ pub struct PollingWakingNonBlockingPipeReader {
     handle: Option<JoinHandle<()>>, // flushing thread handle
     register: Arc<RegisteredPoll>,
     has_registered: bool,
+    /// take ownership of the source pipe
+    /// in order to avoid the source
+    /// dropping while the thread
+    /// is still active
+    _src: PhantomData<R>,
 }
 
-impl PollingWakingNonBlockingPipeReader {
-    pub fn new<R: Read + Sized + Send + 'static>(mut source: R, capicity: usize) -> Self {
+impl<R: Read + Sized + Send + 'static> PollingWakingNonBlockingPipeReader<R> {
+    pub fn new(mut source: R, capicity: usize) -> Self {
         // create async r/w memory
 
         // pipe is the reader
@@ -74,6 +80,7 @@ impl PollingWakingNonBlockingPipeReader {
             handle: Some(h),
             register: Arc::new(RegisteredPoll::default()),
             has_registered: false,
+            _src: PhantomData,
         }
     }
 
@@ -103,7 +110,7 @@ impl PollingWakingNonBlockingPipeReader {
     }
 }
 
-impl Read for PollingWakingNonBlockingPipeReader {
+impl<R: Read> Read for PollingWakingNonBlockingPipeReader<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let waker = Waker::from(self.register.clone());
         let mut ctx = Context::from_waker(&waker);
@@ -111,5 +118,33 @@ impl Read for PollingWakingNonBlockingPipeReader {
             Poll::Pending => Ok(0),
             Poll::Ready(output) => output,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        io::{Read, Write},
+        thread,
+        time::Duration,
+    };
+
+    use crate::polling::PollingWakingNonBlockingPipeReader;
+
+    #[test]
+    fn read() {
+        const CAPICITY: usize = 1024;
+        const PAYLOAD: &'static [u8] = b"PAYLOAD\n";
+        const SLEEP_DURATION: Duration = Duration::from_millis(200);
+
+        let (pipe_reader, mut pipe_writer) = miow::pipe::anonymous(1024).unwrap();
+        let mut drain = PollingWakingNonBlockingPipeReader::new(pipe_reader, CAPICITY);
+        pipe_writer.write(PAYLOAD).ok();
+        thread::sleep(SLEEP_DURATION);
+        let mut buff = [0u8; PAYLOAD.len()];
+        let operation = drain.read(&mut buff);
+
+        assert_eq!(PAYLOAD.len(), *operation.as_ref().unwrap());
+        assert_eq!(&buff[..operation.unwrap()], PAYLOAD)
     }
 }

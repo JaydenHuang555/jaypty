@@ -2,10 +2,7 @@ pub mod child;
 pub mod command;
 pub mod error;
 pub mod io;
-mod os_imports;
 pub mod tokens;
-
-pub use os_imports::*;
 
 use std::path::PathBuf;
 
