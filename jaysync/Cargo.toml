@@ -1,6 +1,8 @@
 [package]
 name = "jaysync"
 version = "0.0.1"
+description = "a simple util for async events"
+license = "MIT"
 edition = "2024"
 
 [dependencies]
