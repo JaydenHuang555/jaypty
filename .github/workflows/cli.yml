@@ -1,14 +1,16 @@
 name: Build
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "**" ]
+  [push]
+  [pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   build:
-    name: ${{ matrix.os }} Build
+    name: ${{ matrix.os }} CI Actions
+
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,7 +28,7 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
  
-      - name: Check formatting
+      - name: Formatting
         run: cargo fmt --all -- --check
 
       - name: Build Release
