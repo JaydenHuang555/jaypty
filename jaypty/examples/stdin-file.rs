@@ -14,7 +14,9 @@ use jaypty::{
 
 const RELAY_FNAME: &'static str = "RELAY";
 
-pub fn main() {
+// TODO: add compile support for unix
+#[cfg(windows)]
+fn stdin_relay() {
     File::create(RELAY_FNAME).unwrap();
     let io = Arc::new(Mutex::new(SystemPseudoTerminalIO::new(Options::default())));
     let mut watch_dog = {
@@ -92,4 +94,9 @@ pub fn main() {
         }
     });
     watch_dog.wait();
+}
+
+pub fn main() {
+    #[cfg(windows)]
+    stdin_relay()
 }
