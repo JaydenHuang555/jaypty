@@ -10,7 +10,7 @@ use std::{
 
 use env_logger::Builder;
 use jaypty::{
-    Options, PseudoTerminalIO,
+    DefinedPseudoTerminalIO, Options,
     child::ChildWatchDogIO,
     io::{SafePseudoTerminalRegisterIO, UnsafePseudoTerminalRegisterIO},
     tokens::Token,

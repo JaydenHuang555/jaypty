@@ -18,7 +18,7 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use jaypty::{PseudoTerminalIO, PtySize};
+use jaypty::{DefinedPseudoTerminalIO, PtySize};
 use windows_sys::{
     Win32::{
         Foundation::HANDLE,

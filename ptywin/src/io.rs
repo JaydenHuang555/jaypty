@@ -8,7 +8,7 @@ use std::{
     task::Wake,
 };
 
-use jaypty::{PseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
+use jaypty::{DefinedPseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
 use jaysync::io::{
     nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
     waking::{WakingNonBlockingPipeReader, WakingNonBlockingPipeWriter},
@@ -73,7 +73,7 @@ impl UnsafePseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
 }
 
 impl
-    PseudoTerminalIO<
+    DefinedPseudoTerminalIO<
         PollingWakingNonBlockingPipeReader,
         PollingWakingNonBlockingPipeWriter,
         WinChildWatchdogIO,

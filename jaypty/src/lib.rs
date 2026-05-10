@@ -6,7 +6,7 @@ pub mod tokens;
 
 use std::path::PathBuf;
 
-pub use io::PseudoTerminalIO;
+pub use io::DefinedPseudoTerminalIO;
 
 use crate::command::Command;
 pub use crate::error::Result;
@@ -43,10 +43,6 @@ impl PtySize {
     }
 }
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
-
 impl Default for PtySize {
     fn default() -> Self {
         Self {
@@ -60,9 +56,5 @@ impl Default for PtySize {
 mod tests {
     use super::*;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    fn it_works() {}
 }
