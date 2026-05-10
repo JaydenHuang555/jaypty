@@ -1,4 +1,6 @@
+pub mod child;
 pub mod command;
+pub mod error;
 pub mod io;
 pub mod tokens;
 
@@ -7,6 +9,7 @@ use std::path::PathBuf;
 pub use io::PseudoTerminalIO;
 
 use crate::command::Command;
+pub use crate::error::Result;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Options {

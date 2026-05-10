@@ -5,16 +5,30 @@ use std::{
 
 use polling::{Event, PollMode, Poller};
 
-use crate::{Options, PtySize};
+use crate::Result;
+use crate::{Options, PtySize, child::ChildWatchDogIO};
 
-pub trait PseudoTerminalRegisterIO {
+pub trait UnsafePseudoTerminalRegisterIO {
     unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event, mode: Option<PollMode>);
     unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event, mode: Option<PollMode>);
     unsafe fn unregister(&mut self);
 }
 
-pub trait PseudoTerminalIO<Reader: Read, Writer: Write>: PseudoTerminalRegisterIO {
+pub trait SafePseudoTerminalRegisterIO {
+    fn register(&mut self, poller: &Arc<Poller>, mode: Option<PollMode>);
+    fn reregister(&mut self, poller: &Arc<Poller>, mode: Option<PollMode>);
+    fn unregister(&mut self);
+}
+
+pub trait PseudoTerminalIO<R: Read, W: Write, ChildWatchdog: ChildWatchDogIO>:
+    UnsafePseudoTerminalRegisterIO + Write + Read
+{
     fn new(_options: Options) -> Self;
 
     fn resize(&mut self, _size: PtySize);
+    fn spawn_and_latch_child_watchdog(&self) -> ChildWatchdog;
+    fn kill_child(&mut self) -> Result<()>;
+
+    fn cin(&mut self) -> &mut W;
+    fn cout(&mut self) -> &mut R;
 }
