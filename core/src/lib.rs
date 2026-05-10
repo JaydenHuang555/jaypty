@@ -21,6 +21,27 @@ pub struct Options {
     pub cmd: Option<Command>,
 }
 
+impl Options {
+    pub const fn default_const() -> Self {
+        Self {
+            dimension: PtySize {
+                columns: 24,
+                rows: 80,
+            },
+            cmd: None,
+            cwd: None,
+        }
+    }
+
+    pub const fn new(dimension: PtySize, cwd: Option<PathBuf>, cmd: Option<Command>) -> Self {
+        Self {
+            dimension,
+            cmd,
+            cwd,
+        }
+    }
+}
+
 impl Default for Options {
     fn default() -> Self {
         Self {
