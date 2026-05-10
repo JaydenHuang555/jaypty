@@ -161,8 +161,10 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 name = "jaypty"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "jaysync",
  "polling",
+ "thiserror",
 ]
 
 [[package]]
@@ -325,6 +327,7 @@ dependencies = [
  "polling",
  "thiserror",
  "windows-sys 0.59.0",
+ "winpipe",
 ]
 
 [[package]]
@@ -534,3 +537,12 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "winpipe"
+version = "0.1.0"
+dependencies = [
+ "jaysync",
+ "piper",
+ "polling",
+]
