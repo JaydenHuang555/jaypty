@@ -1,25 +1,35 @@
 use std::{
-    sync::mpsc::{self, Receiver, Sender},
+    ffi::c_void,
+    io::{Read, Write},
+    sync::{
+        atomic::AtomicPtr,
+        mpsc::{self, Receiver, Sender},
+    },
     task::Wake,
 };
 
-use jaypty::{PseudoTerminalIO, io::PseudoTerminalRegisterIO, tokens::Token};
+use jaypty::{PseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
 use jaysync::io::{
     nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
     waking::{WakingNonBlockingPipeReader, WakingNonBlockingPipeWriter},
 };
 use polling::Event;
-use windows_sys::Win32::System::Console::COORD;
+use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
+use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 
 use super::ContpyHandle;
-use crate::factory;
 use crate::factory::ContpySpawn;
 use crate::{RegisteredPoll, poll::Polled};
+use crate::{child::WinChildWatchdogIO, factory};
+
+type R = factory::io::R;
+type W = factory::io::W;
 
 pub struct ContpyPseudoTerminalIO {
-    cout: WakingNonBlockingPipeReader<RegisteredPoll>,
-    cin: WakingNonBlockingPipeWriter<RegisteredPoll>,
+    cout: R,
+    cin: W,
     handle: ContpyHandle,
+    child_handle: AtomicPtr<c_void>,
 }
 
 impl Drop for ContpyPseudoTerminalIO {
@@ -32,32 +42,22 @@ impl Drop for ContpyPseudoTerminalIO {
 
 unsafe impl Send for ContpyPseudoTerminalIO {}
 
-impl PseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
+impl UnsafePseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
     unsafe fn register(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
         mode: Option<polling::PollMode>,
     ) {
-        self.cout.map_wake(|wake| {
-            let mut lock = wake.polled.lock().unwrap();
-            *lock = Some(Polled::new(poller, Token::CoutWrite.keyify(intrest), mode))
-        });
-        self.cin.map_wake(|wake| {
-            let mut lock = wake.polled.lock().unwrap();
-            *lock = Some(Polled::new(poller, Token::CinRead.keyify(intrest), mode))
-        });
+        self.cin
+            .register(poller, Token::CinWrite.keyify(intrest), mode);
+        self.cout
+            .register(poller, Token::CoutRead.keyify(intrest), mode);
     }
 
     unsafe fn unregister(&mut self) {
-        self.cin.map_wake(|wake| {
-            let mut lock = wake.polled.lock().unwrap();
-            *lock = None;
-        });
-        self.cout.map_wake(|wake| {
-            let mut lock = wake.polled.lock().unwrap();
-            *lock = None;
-        });
+        self.cin.unregister();
+        self.cout.unregister();
     }
 
     unsafe fn reregister(
@@ -74,12 +74,14 @@ impl PseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
 
 impl
     PseudoTerminalIO<
-        WakingNonBlockingPipeReader<RegisteredPoll>,
-        WakingNonBlockingPipeWriter<RegisteredPoll>,
+        PollingWakingNonBlockingPipeReader,
+        PollingWakingNonBlockingPipeWriter,
+        WinChildWatchdogIO,
     > for ContpyPseudoTerminalIO
 {
     fn new(options: jaypty::Options) -> Self {
         let mut spawn = ContpySpawn::spawn(options);
+        let child_handle = factory::watch(&mut spawn);
         let cin = factory::cin(&mut spawn);
         let cout = factory::cout(&mut spawn);
 
@@ -87,6 +89,7 @@ impl
             cin,
             cout,
             handle: spawn.handle.take().expect("unable to take handle"),
+            child_handle,
         }
     }
 
@@ -100,5 +103,43 @@ impl
                 },
             );
         }
+    }
+
+    fn spawn_and_latch_child_watchdog(&self) -> WinChildWatchdogIO {
+        WinChildWatchdogIO::latch(self.child_handle.load(std::sync::atomic::Ordering::Relaxed))
+    }
+
+    fn kill_child(&mut self) -> jaypty::Result<()> {
+        let _ = unsafe {
+            TerminateProcess(
+                self.child_handle.load(std::sync::atomic::Ordering::Relaxed),
+                1,
+            )
+        };
+        Ok(())
+    }
+
+    fn cin(&mut self) -> &mut PollingWakingNonBlockingPipeWriter {
+        &mut self.cin
+    }
+
+    fn cout(&mut self) -> &mut PollingWakingNonBlockingPipeReader {
+        &mut self.cout
+    }
+}
+
+impl Write for ContpyPseudoTerminalIO {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.cin.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.cin.flush()
+    }
+}
+
+impl Read for ContpyPseudoTerminalIO {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.cout.read(buf)
     }
 }

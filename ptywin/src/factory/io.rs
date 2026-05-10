@@ -1,26 +1,20 @@
-
-
 use jaysync::io::waking::{WakingNonBlockingPipeReader, WakingNonBlockingPipeWriter};
+use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 
 use super::ContpySpawn;
 use crate::RegisteredPoll;
 
+pub(crate) type W = PollingWakingNonBlockingPipeWriter;
+pub(crate) type R = PollingWakingNonBlockingPipeReader;
+
 const PIPE_CAPTICITY: usize = 1024;
 
 #[inline]
-pub(crate) fn cout(spawn: &mut ContpySpawn) -> WakingNonBlockingPipeReader<RegisteredPoll> {
-    WakingNonBlockingPipeReader::new(
-        spawn.cout.take().unwrap(),
-        PIPE_CAPTICITY,
-        RegisteredPoll::default(),
-    )
+pub(crate) fn cout(spawn: &mut ContpySpawn) -> R {
+    R::new(spawn.cout.take().unwrap(), PIPE_CAPTICITY)
 }
 
 #[inline]
-pub(crate) fn cin(spawn: &mut ContpySpawn) -> WakingNonBlockingPipeWriter<RegisteredPoll> {
-    WakingNonBlockingPipeWriter::new(
-        spawn.cin.take().unwrap(),
-        PIPE_CAPTICITY,
-        RegisteredPoll::default(),
-    )
+pub(crate) fn cin(spawn: &mut ContpySpawn) -> W {
+    W::new(spawn.cin.take().unwrap(), PIPE_CAPTICITY)
 }

@@ -79,6 +79,7 @@ impl PollingWakingNonBlockingPipeReader {
 
     pub fn register(&mut self, poller: &Arc<Poller>, event: Event, mode: Option<PollMode>) {
         if !event.readable {
+            self.unregister();
             return;
         }
         {

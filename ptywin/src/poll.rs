@@ -3,7 +3,10 @@ use std::{
     task::Wake,
 };
 
-use polling::{Event, PollMode, Poller};
+use polling::{
+    Event, PollMode, Poller,
+    os::iocp::{CompletionPacket, PollerIocpExt},
+};
 
 pub struct Polled {
     pub poller: Arc<Poller>,
@@ -38,5 +41,16 @@ impl Wake for RegisteredPoll {
         self.wake_by_ref();
     }
 
-    fn wake_by_ref(self: &std::sync::Arc<Self>) {}
+    fn wake_by_ref(self: &std::sync::Arc<Self>) {
+        let lock = self
+            .polled
+            .lock()
+            .expect("mutex lock for registered poll is poisoned");
+        if let Some(intrest) = lock.as_ref() {
+            intrest
+                .poller
+                .post(CompletionPacket::new(intrest.event))
+                .unwrap();
+        }
+    }
 }

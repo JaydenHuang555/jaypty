@@ -33,7 +33,7 @@ use windows_sys::{
 
 use crate::ContpyHandle;
 use crate::ContpySymbols;
-use crate::child::ChildWatchdog;
+use crate::child::WinChildWatchdogIO;
 use crate::factory;
 
 /// just a helper storage struct
@@ -47,7 +47,7 @@ pub struct ContpySpawn {
     /// reader to cout
     pub cout: Option<AnonRead>,
     /// child process
-    pub child: Option<ChildWatchdog>,
+    pub child: Option<*mut c_void>,
 }
 
 unsafe impl Send for ContpySpawn {}
@@ -112,7 +112,7 @@ impl ContpySpawn {
             handle: Some(pty_handle as ContpyHandle),
             cin: Some(cin),
             cout: Some(cout),
-            child: Some(ChildWatchdog::new(pi_client.hProcess)),
+            child: Some(pi_client.hProcess),
         }
     }
 }

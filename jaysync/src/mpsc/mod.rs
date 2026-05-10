@@ -36,7 +36,9 @@ impl<Event: Clone> PeekableReciever<Event> {
     }
 
     pub fn pop(&mut self) -> Option<Event> {
-        self.stored_peek.take()
+        let ret = self.stored_peek.take();
+        self.peek();
+        ret
     }
 
     pub fn recv(&mut self) -> Result<Event, RecvError> {

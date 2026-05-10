@@ -1,10 +1,11 @@
-use crate::error::ErrorKind;
+use crate::error::LoadErrorKind;
 
 use super::Error;
 use super::Result;
 use std::mem;
 use std::sync::OnceLock;
 
+use jaypty::error::ErrorKind;
 use windows_sys::Win32::System::Console::ClosePseudoConsole;
 use windows_sys::Win32::System::Console::CreatePseudoConsole;
 use windows_sys::Win32::System::Console::ResizePseudoConsole;
@@ -90,9 +91,11 @@ impl ContpySymbols {
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));
             if hmodule.is_null() {
-                return Error::from(ErrorKind::LoadErrKind)
-                    .context("unable to load contpy.dll")
-                    .into();
+                return Error::from(Error::failed_loading_pty(
+                    LoadErrorKind::UnableToFindContpyDll,
+                ))
+                .context("unable to load contpy.dll")
+                .into();
             }
             let create = GetProcAddress(hmodule, s!("CreatePseudoConsole")).unwrap();
             let resize = GetProcAddress(hmodule, s!("ResizePseudoConsole")).unwrap();

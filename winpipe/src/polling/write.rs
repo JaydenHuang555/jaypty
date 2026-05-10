@@ -84,6 +84,7 @@ impl PollingWakingNonBlockingPipeWriter {
 
     pub fn register(&mut self, poller: &Arc<Poller>, event: Event, mode: Option<PollMode>) {
         if !event.writable {
+            self.unregister();
             return;
         }
         {

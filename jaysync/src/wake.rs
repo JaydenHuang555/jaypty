@@ -3,6 +3,12 @@ use std::{sync::mpsc::Sender, task::Wake, thread};
 /// waker that unparks a given thread
 pub struct ThreadWaker(pub thread::Thread);
 
+impl ThreadWaker {
+    pub fn current() -> Self {
+        Self(thread::current())
+    }
+}
+
 impl Wake for ThreadWaker {
     fn wake(self: std::sync::Arc<Self>) {
         self.0.unpark();
