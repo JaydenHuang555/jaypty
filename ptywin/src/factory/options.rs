@@ -4,8 +4,8 @@ use std::{
     ptr,
 };
 
+use crate::util::sanitize_string;
 use jaypty_core::command::Command;
-use jwinutil::sanitize_string;
 use windows_sys::{Win32::System::Threading::EXTENDED_STARTUPINFO_PRESENT, core::PWSTR};
 
 pub const DEFAULT_SHELL: &'static str = "cmd.exe";

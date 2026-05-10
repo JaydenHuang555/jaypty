@@ -335,7 +335,6 @@ dependencies = [
  "env_logger",
  "jaypty_core",
  "jaysync",
- "jwinutil",
  "log",
  "mio",
  "miow",

@@ -1,4 +1,4 @@
-use jwinutil::sanitize_string;
+use crate::util::sanitize_string;
 use miow::pipe::{AnonRead, AnonWrite};
 use polling::{Event, PollMode, Poller};
 use std::io::{PipeReader, Read, Write};

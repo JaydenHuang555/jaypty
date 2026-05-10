@@ -5,6 +5,7 @@ pub mod error;
 pub mod factory;
 pub mod io;
 pub mod symbols;
+pub(crate) mod util;
 
 pub(crate) use symbols::ContpyHandle;
 pub(crate) use symbols::ContpySymbols;
