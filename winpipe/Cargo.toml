@@ -1,0 +1,9 @@
+[package]
+name = "winpipe"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+piper = "0.2.5"
+polling = "3.11.0"
+jaysync = {path = "../jaysync"}
