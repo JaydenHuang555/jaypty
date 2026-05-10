@@ -1,5 +1,5 @@
-#[cfg(windows)]
+#[cfg(any(windows, feature = "win"))]
 mod win;
 
-#[cfg(windows)]
+#[cfg(any(windows, feature = "win"))]
 pub use win::*;

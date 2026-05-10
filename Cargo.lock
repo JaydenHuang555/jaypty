@@ -165,7 +165,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
 name = "jaypty"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "jaypty_core",
  "polling",
@@ -174,7 +174,7 @@ dependencies = [
 
 [[package]]
 name = "jaypty_core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "bitflags",
  "jaysync",
@@ -330,7 +330,7 @@ dependencies = [
 
 [[package]]
 name = "ptywin"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "env_logger",
  "jaypty_core",
@@ -577,7 +577,7 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winpipe"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "jaysync",
  "miow",

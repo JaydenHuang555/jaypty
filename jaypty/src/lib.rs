@@ -17,8 +17,11 @@ pub use polling::Poller;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::SystemPseudoTerminalIO;
 
+    // just a simple check to make sure it can compile on systems
     #[test]
-    fn it_works() {}
+    fn system() {
+        let io = SystemPseudoTerminalIO::default();
+    }
 }

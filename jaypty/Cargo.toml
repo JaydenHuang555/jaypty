@@ -1,12 +1,17 @@
 [package]
 name = "jaypty"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 
+
 [dependencies]
-jaypty_core = {path = "../core"}
+jaypty_core = {version = "0.0.1", path = "../core"}
 polling = "3.11.0"
 
 
 [target.'cfg(windows)'.dependencies]
-ptywin = {path = "../ptywin"}
+ptywin = {version = "0.0.1", path = "../ptywin"}
+
+[features]
+default = []
+win = []
