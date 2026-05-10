@@ -5,7 +5,6 @@ use super::Result;
 use std::mem;
 use std::sync::OnceLock;
 
-use jaypty::error::ErrorKind;
 use windows_sys::Win32::System::Console::ClosePseudoConsole;
 use windows_sys::Win32::System::Console::CreatePseudoConsole;
 use windows_sys::Win32::System::Console::ResizePseudoConsole;

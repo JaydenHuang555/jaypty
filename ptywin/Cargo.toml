@@ -11,7 +11,7 @@ piper = "0.2.5"
 polling = "3.11.0"
 thiserror = "2.0.18"
 winpipe = {path = "../winpipe"}
-jaypty = {path = "../jaypty"}
+jaypty_core = {path = "../core"}
 jwinutil = {path = "../jwinutil"}
 jaysync = {path = "../jaysync"}
 env_logger = "0.11.10"

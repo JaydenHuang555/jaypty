@@ -8,11 +8,7 @@ use std::{
     task::Wake,
 };
 
-use jaypty::{DefinedPseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
-use jaysync::io::{
-    nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
-    waking::{WakingNonBlockingPipeReader, WakingNonBlockingPipeWriter},
-};
+use jaypty_core::{DefinedPseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
 use polling::Event;
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
@@ -79,7 +75,7 @@ impl
         WinChildWatchdogIO,
     > for ContpyPseudoTerminalIO
 {
-    fn new(options: jaypty::Options) -> Self {
+    fn new(options: jaypty_core::Options) -> Self {
         let mut spawn = ContpySpawn::spawn(options);
         let child_handle = factory::watch(&mut spawn);
         let cin = factory::cin(&mut spawn);
@@ -93,7 +89,7 @@ impl
         }
     }
 
-    fn resize(&mut self, size: jaypty::PtySize) {
+    fn resize(&mut self, size: jaypty_core::PtySize) {
         unsafe {
             super::loaded_symbols().resize(
                 self.handle,
@@ -109,7 +105,7 @@ impl
         WinChildWatchdogIO::latch(self.child_handle.load(std::sync::atomic::Ordering::Relaxed))
     }
 
-    fn kill_child(&mut self) -> jaypty::Result<()> {
+    fn kill_child(&mut self) -> jaypty_core::Result<()> {
         let _ = unsafe {
             TerminateProcess(
                 self.child_handle.load(std::sync::atomic::Ordering::Relaxed),

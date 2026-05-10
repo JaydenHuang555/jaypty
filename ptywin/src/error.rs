@@ -1,6 +1,6 @@
 use std::{fmt::Display, io, result};
 
-use jaypty::error::ErrorKind;
+use jaypty_core::error::ErrorKind;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]

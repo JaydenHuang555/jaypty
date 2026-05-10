@@ -4,7 +4,7 @@ use std::{
     ptr,
 };
 
-use jaypty::command::Command;
+use jaypty_core::command::Command;
 use jwinutil::sanitize_string;
 use windows_sys::{Win32::System::Threading::EXTENDED_STARTUPINFO_PRESENT, core::PWSTR};
 

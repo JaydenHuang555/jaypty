@@ -16,9 +16,9 @@ compile_error!("PLEASE COMPILE ON WINDOWS!");
 pub use poll::RegisteredPoll;
 
 pub use crate::factory::ContpySpawn;
-pub use jaypty::error::Error;
-pub use jaypty::error::ErrorKind;
-pub use jaypty::error::Result;
+pub use jaypty_core::error::Error;
+pub use jaypty_core::error::ErrorKind;
+pub use jaypty_core::error::Result;
 
 #[cfg(test)]
 mod tests {
@@ -30,7 +30,7 @@ mod tests {
         time::{Duration, Instant},
     };
 
-    use jaypty::{
+    use jaypty_core::{
         io::{SafePseudoTerminalRegisterIO, UnsafePseudoTerminalRegisterIO},
         tokens::Token,
     };

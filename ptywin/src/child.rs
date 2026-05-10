@@ -13,7 +13,7 @@ use std::{
     time::Duration,
 };
 
-use jaypty::{
+use jaypty_core::{
     child::ChildWatchDogIO,
     io::{SafePseudoTerminalRegisterIO, UnsafePseudoTerminalRegisterIO},
     tokens::Token,
@@ -172,7 +172,7 @@ impl SafePseudoTerminalRegisterIO for WinChildWatchdogIO {
 }
 
 impl ChildWatchDogIO for WinChildWatchdogIO {
-    fn status(&mut self) -> Option<jaypty::Result<u32>> {
+    fn status(&mut self) -> Option<jaypty_core::Result<u32>> {
         self.exit_status = self.exit_status.take().or_else(|| {
             self.rx
                 .pop()

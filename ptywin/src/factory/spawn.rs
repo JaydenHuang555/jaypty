@@ -18,7 +18,7 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use jaypty::{DefinedPseudoTerminalIO, PtySize};
+use jaypty_core::{DefinedPseudoTerminalIO, PtySize};
 use windows_sys::{
     Win32::{
         Foundation::HANDLE,
@@ -53,7 +53,7 @@ pub struct ContpySpawn {
 unsafe impl Send for ContpySpawn {}
 
 impl ContpySpawn {
-    pub fn spawn(options: jaypty::Options) -> Self {
+    pub fn spawn(options: jaypty_core::Options) -> Self {
         let dimensions = options.dimension;
         let symbols = unsafe { ContpySymbols::instance() };
         let mut pty_handle: ContpyHandle = 0;

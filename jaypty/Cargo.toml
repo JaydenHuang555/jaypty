@@ -4,7 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-polling = "3.11.0"
-jaysync = {path = "../jaysync"}
-thiserror = "2.0.18"
-bitflags = "2.11.1"
+jaypty_core = {path = "../core"}
+
