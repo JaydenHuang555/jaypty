@@ -2,9 +2,9 @@ name: Cross Platform Build
 
 on:
   push:
-    branches:
+    branches: [ master ]
   pull_request:
-    branches: 
+    branches: [ master ]
 
 jobs:
   build:
@@ -12,21 +12,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # Define the operating systems to test against
         os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout code
-        uses: [actions/checkout@v4](https://github.com)
+        uses: actions/checkout@v4
 
       - name: Set up Rust toolchain
-        uses: [dtolnay/rust-toolchain@stable](https://github.com/dtolnay/rust-toolchain)
+        uses: dtolnay/rust-toolchain@stable
         with:
-          # Optional: add components like clippy or rustfmt
-          components: clippy, rustfmt
+          components: rustfmt
 
       - name: Cache dependencies
-        uses: [Swatinem/rust-cache@v2](https://github.com)
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
       - name: Run cargo build
-        run: cargo build
+        run: cargo build --release
