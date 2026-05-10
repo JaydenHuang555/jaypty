@@ -63,3 +63,39 @@ fn push_escaped_arg(cmd: &mut String, arg: &str) {
         cmd.push('"');
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::factory::options::push_escaped_arg;
+
+    /// modified code from
+    /// https://github.com/alacritty/alacritty/blob/master/alacritty_terminal/src/tty/windows/mod.rs
+    #[test]
+    fn test_escape() {
+        let test_set = vec![
+            ("abc", "abc"),
+            ("", "\"\""),
+            (" ", "\" \""),
+            ("ab c", "\"ab c\""),
+            ("ab\tc", "\"ab\tc\""),
+            ("ab\\c", "ab\\c"),
+            ("ab\"c", "ab\\\"c"),
+            ("\"", "\\\""),
+            ("a\"b\"c", "a\\\"b\\\"c"),
+            ("ab \"c", "\"ab \\\"c\""),
+            ("a \"b\" c", "\"a \\\"b\\\" c\""),
+            ("C:\\Program Files\\", "\"C:\\Program Files\\\\\""),
+            ("C:\\Program Files\\a.txt", "\"C:\\Program Files\\a.txt\""),
+            (
+                r#"sh -c "cd /home/user; ARG='abc' \""'${SHELL:-sh}" -i -c '"'echo hello'""#,
+                r#""sh -c \"cd /home/user; ARG='abc' \\\"\"'${SHELL:-sh}\" -i -c '\"'echo hello'\"""#,
+            ),
+        ];
+
+        for (input, expected) in test_set {
+            let mut escaped_arg = String::new();
+            push_escaped_arg(&mut escaped_arg, input);
+            assert_eq!(escaped_arg, expected, "Failed for input: {}", input);
+        }
+    }
+}
