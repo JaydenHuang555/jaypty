@@ -2,7 +2,7 @@ name: Cross Platform Build
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "**" ]
 
