@@ -9,7 +9,7 @@ pub use os_imports::*;
 
 use std::path::PathBuf;
 
-pub use io::DefinedPseudoTerminalIO;
+pub use io::PseudoTerminalIO;
 
 use crate::command::Command;
 pub use crate::error::Result;

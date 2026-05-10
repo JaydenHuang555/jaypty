@@ -1,41 +1,26 @@
+use jaypty::ChildWatchDogIO;
+use jaypty::PollIntrest;
+use jaypty::PolledEvents;
 use std::{
     fs::File,
     io::{BufReader, ErrorKind, Read, Write},
-    ops::Add,
-    sync::{Arc, Mutex, RwLock, mpsc},
-    task::{Wake, Waker},
+    sync::{Arc, Mutex},
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
-use env_logger::Builder;
-use jaypty_core::{
-    DefinedPseudoTerminalIO, Options,
-    child::ChildWatchDogIO,
-    io::{SafePseudoTerminalRegisterIO, UnsafePseudoTerminalRegisterIO},
-    tokens::Token,
+use jaypty::{
+    Options, Poller, PseudoTerminalIO, SystemPseudoTerminalIO, UnsafePseudoTerminalRegisterIO,
 };
-use jaysync::wake::ThreadWaker;
-use polling::{Event, Events, Poller};
-use ptywin::io::ContpyPseudoTerminalIO;
-
-#[derive(Clone, Debug)]
-pub struct WriteState {
-    buff: [u8; 512],
-}
 
 pub fn main() {
-    let mut b = Builder::new();
-    b.filter_level(log::LevelFilter::Info);
-    b.init();
-
-    let io = Arc::new(Mutex::new(ContpyPseudoTerminalIO::new(Options::default())));
+    let io = Arc::new(Mutex::new(SystemPseudoTerminalIO::new(Options::default())));
     let mut watch_dog = {
         let lock = io.lock().unwrap();
         lock.spawn_and_latch_child_watchdog()
     };
     let poller = Arc::new(Poller::new().unwrap());
-    let current_event = Event::readable(0);
+    let current_event = PollIntrest::readable(0);
     unsafe {
         io.lock().unwrap().register(&poller, current_event, None);
     }
@@ -53,7 +38,7 @@ pub fn main() {
                     }
                     Err(n) if n.kind() == ErrorKind::Interrupted => {}
                     Err(n) => {
-                        log::error!("found error when reading from file {}", n);
+                        panic!("found error when reading from file {}", n);
                     }
                 }
             }
@@ -63,7 +48,7 @@ pub fn main() {
     let io_reader = Arc::clone(&io);
     let read_poller = Arc::clone(&poller);
     thread::spawn(move || {
-        let mut events = Events::new();
+        let mut events = PolledEvents::new();
         loop {
             events.clear();
             read_poller
@@ -91,7 +76,7 @@ pub fn main() {
                         }
                         Err(e) => {
                             if e.kind() != ErrorKind::Interrupted {
-                                log::error!("found error when reading from cout");
+                                panic!("found error when reading from cout");
                             }
                         }
                     }
@@ -99,7 +84,7 @@ pub fn main() {
                 unsafe {
                     io.lock()
                         .unwrap()
-                        .reregister(&read_poller, Event::readable(0), None);
+                        .reregister(&read_poller, PollIntrest::readable(0), None);
                 }
             }
         }

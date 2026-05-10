@@ -1,11 +1,19 @@
 mod os;
 
+pub use jaypty_core::PseudoTerminalIO;
+pub use jaypty_core::child::ChildWatchDogIO;
 pub use jaypty_core::command::Command;
-pub use jaypty_core::io::*;
+pub use jaypty_core::io::SafePseudoTerminalRegisterIO;
+pub use jaypty_core::io::UnsafePseudoTerminalRegisterIO;
 pub use jaypty_core::tokens::Token;
 pub use jaypty_core::{Options, PtySize};
 
 pub use os::{SystemPseudoTerminalIO, SystemWatchDogIO};
+
+pub use polling::Event as PollIntrest;
+pub use polling::Events as PolledEvents;
+pub use polling::PollMode;
+pub use polling::Poller;
 
 #[cfg(test)]
 mod tests {

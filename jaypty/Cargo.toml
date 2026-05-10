@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 jaypty_core = {path = "../core"}
+polling = "3.11.0"
 
 
 [target.'cfg(windows)'.dependencies]

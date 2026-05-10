@@ -20,8 +20,8 @@ pub trait SafePseudoTerminalRegisterIO {
     fn unregister(&mut self);
 }
 
-pub trait DefinedPseudoTerminalIO<R: Read, W: Write, ChildWatchdog: ChildWatchDogIO>:
-    UnsafePseudoTerminalRegisterIO + Write + Read
+pub trait PseudoTerminalIO<R: Read, W: Write, ChildWatchdog: ChildWatchDogIO>:
+    UnsafePseudoTerminalRegisterIO + Write + Read + Default
 {
     fn new(_options: Options) -> Self;
 

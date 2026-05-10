@@ -8,7 +8,7 @@ use std::{
     task::Wake,
 };
 
-use jaypty_core::{DefinedPseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
+use jaypty_core::{Options, PseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
 use polling::Event;
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 use winpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
@@ -33,6 +33,13 @@ impl Drop for ContpyPseudoTerminalIO {
         unsafe {
             super::loaded_symbols().close(self.handle);
         }
+    }
+}
+
+impl Default for ContpyPseudoTerminalIO {
+    fn default() -> Self {
+        let options = Options::default();
+        ContpyPseudoTerminalIO::new(options)
     }
 }
 
@@ -69,7 +76,7 @@ impl UnsafePseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
 }
 
 impl
-    DefinedPseudoTerminalIO<
+    PseudoTerminalIO<
         PollingWakingNonBlockingPipeReader,
         PollingWakingNonBlockingPipeWriter,
         WinChildWatchdogIO,

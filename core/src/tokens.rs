@@ -1,4 +1,5 @@
 use polling::Event;
+use strum::EnumIter;
 
 bitflags::bitflags! {
     pub struct TokenFlags: u32 {
@@ -12,6 +13,7 @@ pub const TOKEN_WRITE: usize = 1;
 pub const TOKEN_CHILD_WATCH_DOG: usize = 2;
 
 #[repr(usize)]
+#[derive(EnumIter, PartialEq, Eq, Debug)]
 pub enum Token {
     CinWrite = TOKEN_WRITE,
     CoutRead = TOKEN_READ,
@@ -63,5 +65,23 @@ impl Into<Event> for Token {
 impl Into<usize> for Token {
     fn into(self) -> usize {
         self as usize
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use strum::IntoEnumIterator;
+
+    use crate::tokens::Token;
+
+    #[test]
+    fn token_collisions() {
+        for (i, t1) in Token::iter().enumerate() {
+            for (j, t2) in Token::iter().enumerate() {
+                if i != j {
+                    assert_ne!(t1, t2)
+                }
+            }
+        }
     }
 }
