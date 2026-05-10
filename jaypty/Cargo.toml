@@ -6,3 +6,6 @@ edition = "2024"
 [dependencies]
 jaypty_core = {path = "../core"}
 
+
+[target.'cfg(windows)'.dependencies]
+ptywin = {path = "../ptywin"}

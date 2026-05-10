@@ -162,6 +162,7 @@ name = "jaypty"
 version = "0.1.0"
 dependencies = [
  "jaypty_core",
+ "ptywin",
 ]
 
 [[package]]
