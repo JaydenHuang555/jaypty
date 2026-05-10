@@ -5,10 +5,6 @@ description = "interface between contpy implementing the PseudoTerminal trait fo
 license = "MIT"
 edition = "2024"
 
-[dependencies.winpipe]
-path = "../winpipe"
-features = ["polling"]
-
 
 [dependencies]
 log = "0.4.29"
@@ -21,6 +17,7 @@ jaypty_core = {path = "../core"}
 jwinutil = {path = "../jwinutil"}
 jaysync = {path = "../jaysync"}
 env_logger = "0.11.10"
+winpipe = {verion = "0.0.1", path = "../winpipe", features = ["polling"]}
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59.0", features = [
