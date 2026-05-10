@@ -1,0 +1,32 @@
+name: Cross Platform Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Define the operating systems to test against
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: [actions/checkout@v4](https://github.com)
+
+      - name: Set up Rust toolchain
+        uses: [dtolnay/rust-toolchain@stable](https://github.com/dtolnay/rust-toolchain)
+        with:
+          # Optional: add components like clippy or rustfmt
+          components: clippy, rustfmt
+
+      - name: Cache dependencies
+        uses: [Swatinem/rust-cache@v2](https://github.com)
+
+      - name: Run cargo build
+        run: cargo build
