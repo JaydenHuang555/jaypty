@@ -1,5 +1,7 @@
 [package]
 name = "jaypty_core"
+description = "core traits and structs for jaypty"
+license = "MIT"
 version = "0.0.1"
 edition = "2024"
 
