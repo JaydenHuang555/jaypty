@@ -53,18 +53,16 @@ impl PollingIntrestRegisterIO for ContpyPseudoTerminalIO {
         intrest: Event,
         mode: Option<polling::PollMode>,
     ) {
-        self.cin
-            .register(poller, Token::CinWrite.keyify(intrest), mode);
-        self.cout
-            .register(poller, Token::CoutRead.keyify(intrest), mode);
+        self.cin.register(poller, intrest, mode);
+        self.cout.register(poller, intrest, mode);
     }
 
-    unsafe fn unregister(&mut self) {
+    fn unregister(&mut self, _: &Arc<Poller>) {
         self.cin.unregister();
         self.cout.unregister();
     }
 
-    unsafe fn reregister(
+    fn reregister(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
