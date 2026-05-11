@@ -3,8 +3,7 @@ mod os;
 pub use jaypty_core::PseudoTerminalIO;
 pub use jaypty_core::child::ChildWatchDogIO;
 pub use jaypty_core::command::Command;
-pub use jaypty_core::io::SafePseudoTerminalRegisterIO;
-pub use jaypty_core::io::UnsafePseudoTerminalRegisterIO;
+pub use jaypty_core::io::PollingIntrestRegisterIO;
 pub use jaypty_core::tokens::Token;
 pub use jaypty_core::{Options, PtySize};
 

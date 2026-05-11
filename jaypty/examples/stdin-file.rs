@@ -9,7 +9,7 @@ use std::{
 };
 
 use jaypty::{
-    Options, Poller, PseudoTerminalIO, SystemPseudoTerminalIO, UnsafePseudoTerminalRegisterIO,
+    Options, Poller, PseudoTerminalIO, SystemPseudoTerminalIO, PollingIntrestRegisterIO,
 };
 
 const RELAY_FNAME: &'static str = "RELAY";

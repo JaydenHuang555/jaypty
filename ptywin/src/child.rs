@@ -14,8 +14,7 @@ use std::{
 };
 
 use jaypty_core::{
-    child::ChildWatchDogIO,
-    io::{SafePseudoTerminalRegisterIO, UnsafePseudoTerminalRegisterIO},
+    child::{ChildPollRegisterIO, ChildWatchDogIO},
     tokens::Token,
 };
 use jaysync::{mpsc::PeekableReciever, wake::ThreadWaker};
@@ -155,17 +154,24 @@ impl WinChildWatchdogIO {
     }
 }
 
-impl SafePseudoTerminalRegisterIO for WinChildWatchdogIO {
-    fn register(&mut self, poller: &Arc<Poller>, _: Option<polling::PollMode>) {
+impl ChildPollRegisterIO for WinChildWatchdogIO {
+    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event) {
         let mut lock = self.intrest.lock().unwrap();
-        *lock = Some(Intrest::new(poller, Token::ChildWatchDog.intrest()))
+        *lock = Some(Intrest {
+            event: intrest,
+            poller: poller.clone(),
+        })
     }
 
-    fn reregister(&mut self, poller: &Arc<Poller>, mode: Option<polling::PollMode>) {
-        self.register(poller, mode);
+    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event) {
+        let mut lock = self.intrest.lock().unwrap();
+        *lock = Some(Intrest {
+            event: intrest,
+            poller: poller.clone(),
+        })
     }
 
-    fn unregister(&mut self) {
+    unsafe fn unregister(&mut self, _: &Arc<Poller>) {
         let mut lock = self.intrest.lock().unwrap();
         *lock = None;
     }

@@ -8,20 +8,14 @@ use polling::{Event, PollMode, Poller};
 use crate::Result;
 use crate::{Options, PtySize, child::ChildWatchDogIO};
 
-pub trait UnsafePseudoTerminalRegisterIO {
+pub trait PollingIntrestRegisterIO {
     unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event, mode: Option<PollMode>);
     unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event, mode: Option<PollMode>);
     unsafe fn unregister(&mut self);
 }
 
-pub trait SafePseudoTerminalRegisterIO {
-    fn register(&mut self, poller: &Arc<Poller>, mode: Option<PollMode>);
-    fn reregister(&mut self, poller: &Arc<Poller>, mode: Option<PollMode>);
-    fn unregister(&mut self);
-}
-
 pub trait PseudoTerminalIO<R: Read, W: Write, ChildWatchdog: ChildWatchDogIO>:
-    UnsafePseudoTerminalRegisterIO + Write + Read + Default
+    PollingIntrestRegisterIO + Write + Read + Default
 {
     fn new(_options: Options) -> Self;
 

@@ -8,7 +8,7 @@ use std::{
     task::Wake,
 };
 
-use jaypty_core::{Options, PseudoTerminalIO, io::UnsafePseudoTerminalRegisterIO, tokens::Token};
+use jaypty_core::{Options, PseudoTerminalIO, io::PollingIntrestRegisterIO, tokens::Token};
 use jwinpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
 use miow::pipe::AnonRead;
 use polling::Event;
@@ -46,7 +46,7 @@ impl Default for ContpyPseudoTerminalIO {
 
 unsafe impl Send for ContpyPseudoTerminalIO {}
 
-impl UnsafePseudoTerminalRegisterIO for ContpyPseudoTerminalIO {
+impl PollingIntrestRegisterIO for ContpyPseudoTerminalIO {
     unsafe fn register(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,

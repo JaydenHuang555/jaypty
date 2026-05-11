@@ -29,10 +29,7 @@ mod tests {
         time::{Duration, Instant},
     };
 
-    use jaypty_core::{
-        io::{SafePseudoTerminalRegisterIO, UnsafePseudoTerminalRegisterIO},
-        tokens::Token,
-    };
+    use jaypty_core::{child::ChildPollRegisterIO, io::PollingIntrestRegisterIO, tokens::Token};
     use jaysync::io::{
         ReadEventCapture, WriteEventCapture, WriteEvents,
         nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
@@ -48,7 +45,9 @@ mod tests {
         let mut child = std::process::Command::new("cmd.exe").spawn().unwrap();
         let mut watchdog = WinChildWatchdogIO::latch(child.as_raw_handle() as HANDLE);
         let poller = Arc::new(Poller::new().unwrap());
-        watchdog.register(&poller, None);
+        unsafe {
+            watchdog.register(&poller, Event::readable(0));
+        }
         let mut events = Events::new();
         child.kill().expect("error when killing child");
 
