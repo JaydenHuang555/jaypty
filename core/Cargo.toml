@@ -8,6 +8,7 @@ edition = "2024"
 [dependencies]
 polling = "3.11.0"
 jaysync = {version = "0.0.1", path = "../jaysync"}
+jaypty_error = {path = "../error"}
 thiserror = "2.0.18"
 bitflags = "2.11.1"
 strum = {version = "0.28.0", features = ["derive"]}
