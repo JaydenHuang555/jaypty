@@ -14,6 +14,10 @@ polling = "3.11.0"
 [target.'cfg(windows)'.dependencies]
 ptywin = {version = "0.0.1", path = "../ptywin"}
 
+
+[target.'cfg(unix)'.dependencies]
+unixpty = {path = "../unixpty"}
+
 [features]
 default = []
 win = []

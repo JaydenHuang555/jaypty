@@ -6,7 +6,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use jaypty_core::{Options, PseudoTerminalIO, error::ChildError, io::PollingIntrestRegisterIO};
+use jaypty_core::{
+    Options, OsEmptyResult, OsResult, SystemError, UnDefinedPseudoTerminalIO,
+    io::PollingIntrestRegisterIO,
+};
 use libc::{F_GETFL, F_SETFL, FILE, O_NONBLOCK, SIGCHLD, SIGHUP, fcntl, winsize};
 use polling::Poller;
 use rustix::{fs::openat, io};
@@ -55,13 +58,13 @@ impl Read for UnixPseudoTerminalIO {
     }
 }
 
-impl PollingIntrestRegisterIO for UnixPseudoTerminalIO {
+impl PollingIntrestRegisterIO<SystemError> for UnixPseudoTerminalIO {
     unsafe fn register(
         &mut self,
         poller: &Arc<polling::Poller>,
         intrest: polling::Event,
         mode: Option<polling::PollMode>,
-    ) {
+    ) -> OsEmptyResult {
         unsafe {
             poller
                 .add_with_mode(
@@ -69,7 +72,7 @@ impl PollingIntrestRegisterIO for UnixPseudoTerminalIO {
                     intrest,
                     mode.unwrap_or(polling::PollMode::Oneshot),
                 )
-                .ok();
+                .map_err(|e| SystemError::PollingPtyIntrestFailure(e))
         }
     }
 
@@ -78,45 +81,44 @@ impl PollingIntrestRegisterIO for UnixPseudoTerminalIO {
         poller: &Arc<polling::Poller>,
         intrest: polling::Event,
         mode: Option<polling::PollMode>,
-    ) {
+    ) -> OsEmptyResult {
         mode.as_ref()
             .map_or_else(
                 || poller.modify(&self.io, intrest),
                 |m| poller.modify_with_mode(&self.io, intrest, *m),
             )
-            .ok();
+            .map_err(|e| SystemError::PollingPtyIntrestFailure(e))
     }
 
-    fn unregister(&mut self, poller: &Arc<Poller>) {
-        poller.delete(&self.io).ok();
+    fn unregister(&mut self, poller: &Arc<Poller>) -> OsEmptyResult {
+        poller
+            .delete(&self.io)
+            .map_err(|e| SystemError::PollingPtyIntrestFailure(e))
     }
 }
 
-impl PseudoTerminalIO<File, File, SignalWatchDogIO> for UnixPseudoTerminalIO {
-    fn new(options: Options) -> Self {
-        let spawned = {
-            let mut pty = Pty::spawn()
-                .map_err(|errno| Error::CreatePty(errno))
-                .unwrap();
+impl UnDefinedPseudoTerminalIO<File, File, SignalWatchDogIO, SystemError> for UnixPseudoTerminalIO {
+    fn new(options: Options) -> OsResult<Self> {
+        let mut pty = Pty::spawn()
+            .map_err(|errno| Error::CreatePty(errno))
+            .unwrap();
 
-            let mut cmd = factory::build_cmd(&options, &pty).unwrap();
+        let mut cmd = factory::build_cmd(&options, &pty).unwrap();
 
-            match cmd.spawn() {
-                Ok(child) => {
-                    pty.set_master_nonblocking();
+        match cmd.spawn() {
+            Ok(child) => {
+                pty.set_master_nonblocking();
 
-                    Ok(Self {
-                        child,
-                        io: File::from(pty.master),
-                    })
-                }
-                Err(e) => Err(Error::IOError(e)),
+                Ok(Self {
+                    child,
+                    io: File::from(pty.master),
+                })
             }
-        };
-        spawned.unwrap()
+            Err(e) => Err(SystemError::FailedSpawnProcess(e)),
+        }
     }
 
-    fn resize(&mut self, size: jaypty_core::PtySize) {
+    fn resize(&mut self, size: jaypty_core::PtySize) -> OsEmptyResult {
         let win = winsize {
             ws_row: size.rows as u16,
             ws_col: size.columns as u16,
@@ -124,6 +126,7 @@ impl PseudoTerminalIO<File, File, SignalWatchDogIO> for UnixPseudoTerminalIO {
             ws_ypixel: 0,
         };
         unsafe { libc::ioctl(self.io.as_raw_fd(), libc::TIOCSWINSZ, &win as *const _) };
+        Ok(())
     }
 
     fn latch_watchdog(&self) -> SignalWatchDogIO {

@@ -5,7 +5,10 @@ use std::{
     sync::mpsc::Receiver,
 };
 
-use jaypty_core::child::{ChildPollRegisterIO, ChildWatchDogIO};
+use jaypty_core::{
+    OsEmptyResult, OsError, OsResult, SystemError,
+    child::{ChildPollRegisterIO, ChildWatchDogIO},
+};
 use libc::SIGCHLD;
 use polling::{PollMode, Poller};
 use signal_hook::{
@@ -38,26 +41,40 @@ impl SignalWatchDogIO {
     }
 }
 
-impl ChildPollRegisterIO for SignalWatchDogIO {
-    unsafe fn register(&mut self, poller: &std::sync::Arc<Poller>, intrest: polling::Event) {
+impl ChildPollRegisterIO<OsError> for SignalWatchDogIO {
+    unsafe fn register(
+        &mut self,
+        poller: &std::sync::Arc<Poller>,
+        intrest: polling::Event,
+    ) -> OsEmptyResult {
         unsafe {
-            poller.add(&self.listener, intrest).ok();
+            poller
+                .add(&self.listener, intrest)
+                .map_err(SystemError::PollingChildIntrestFailure)
         }
     }
 
-    unsafe fn reregister(&mut self, poller: &std::sync::Arc<Poller>, intrest: polling::Event) {
-        poller.modify(&self.listener, intrest).ok();
+    unsafe fn reregister(
+        &mut self,
+        poller: &std::sync::Arc<Poller>,
+        intrest: polling::Event,
+    ) -> OsEmptyResult {
+        poller
+            .modify(&self.listener, intrest)
+            .map_err(SystemError::PollingChildIntrestFailure)
     }
 
-    unsafe fn unregister(&mut self, poller: &std::sync::Arc<Poller>) {
-        poller.delete(&self.listener).ok();
+    unsafe fn unregister(&mut self, poller: &std::sync::Arc<Poller>) -> OsEmptyResult {
+        poller
+            .delete(&self.listener)
+            .map_err(SystemError::PollingChildIntrestFailure)
     }
 }
 
-impl ChildWatchDogIO for SignalWatchDogIO {
+impl ChildWatchDogIO<SystemError> for SignalWatchDogIO {
     /// TODO: add support for getting the exit code from the child
     /// if it does exit
-    fn status(&mut self) -> Option<jaypty_core::Result<u32>> {
+    fn status(&mut self) -> Option<OsResult> {
         if self.detected_signal {
             Some(Ok(0))
         } else {

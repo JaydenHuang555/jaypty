@@ -222,6 +222,7 @@ dependencies = [
  "jaypty_core",
  "polling",
  "ptywin",
+ "unixpty",
 ]
 
 [[package]]
