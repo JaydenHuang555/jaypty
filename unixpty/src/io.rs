@@ -1,7 +1,8 @@
-use jaypty_core::OsError;
+use crate::Cin;
+use crate::Cout;
 use std::{
     fs::File,
-    io::{BufReader, BufWriter, Read, Write},
+    io::{Read, Write},
     os::{fd::AsRawFd, unix::net::UnixStream},
     process::{Child, ExitStatus},
     sync::{Arc, Mutex},
@@ -98,7 +99,7 @@ impl PollingIntrestRegisterIO<SystemError> for UnixPseudoTerminalIO {
     }
 }
 
-impl UnDefinedPseudoTerminalIO<File, File, SignalWatchDogIO, SystemError> for UnixPseudoTerminalIO {
+impl UnDefinedPseudoTerminalIO<Cout, Cin, SignalWatchDogIO, SystemError> for UnixPseudoTerminalIO {
     fn new(options: Options) -> OsResult<Self> {
         let mut pty = Pty::spawn().map_err(Error::CreatePty).unwrap();
 
@@ -136,11 +137,11 @@ impl UnDefinedPseudoTerminalIO<File, File, SignalWatchDogIO, SystemError> for Un
         self.child.kill().map_err(SystemError::KillChildFailure)
     }
 
-    fn cin(&mut self) -> &mut File {
+    fn cin(&mut self) -> &mut Cin {
         &mut self.io
     }
 
-    fn cout(&mut self) -> &mut File {
+    fn cout(&mut self) -> &mut Cout {
         &mut self.io
     }
 }

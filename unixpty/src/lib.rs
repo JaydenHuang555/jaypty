@@ -1,4 +1,6 @@
 #[cfg(unix)]
+mod defs;
+#[cfg(unix)]
 pub mod err;
 #[cfg(unix)]
 pub(crate) mod factory;
