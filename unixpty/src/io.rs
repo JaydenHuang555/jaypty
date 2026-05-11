@@ -1,3 +1,4 @@
+use jaypty_core::OsError;
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
@@ -72,7 +73,7 @@ impl PollingIntrestRegisterIO<SystemError> for UnixPseudoTerminalIO {
                     intrest,
                     mode.unwrap_or(polling::PollMode::Oneshot),
                 )
-                .map_err(|e| SystemError::PollingPtyIntrestFailure(e))
+                .map_err(SystemError::PollingPtyIntrestFailure)
         }
     }
 
@@ -87,21 +88,19 @@ impl PollingIntrestRegisterIO<SystemError> for UnixPseudoTerminalIO {
                 || poller.modify(&self.io, intrest),
                 |m| poller.modify_with_mode(&self.io, intrest, *m),
             )
-            .map_err(|e| SystemError::PollingPtyIntrestFailure(e))
+            .map_err(SystemError::PollingPtyIntrestFailure)
     }
 
     fn unregister(&mut self, poller: &Arc<Poller>) -> OsEmptyResult {
         poller
             .delete(&self.io)
-            .map_err(|e| SystemError::PollingPtyIntrestFailure(e))
+            .map_err(SystemError::PollingPtyIntrestFailure)
     }
 }
 
 impl UnDefinedPseudoTerminalIO<File, File, SignalWatchDogIO, SystemError> for UnixPseudoTerminalIO {
     fn new(options: Options) -> OsResult<Self> {
-        let mut pty = Pty::spawn()
-            .map_err(|errno| Error::CreatePty(errno))
-            .unwrap();
+        let mut pty = Pty::spawn().map_err(Error::CreatePty).unwrap();
 
         let mut cmd = factory::build_cmd(&options, &pty).unwrap();
 
@@ -129,14 +128,12 @@ impl UnDefinedPseudoTerminalIO<File, File, SignalWatchDogIO, SystemError> for Un
         Ok(())
     }
 
-    fn latch_watchdog(&self) -> SignalWatchDogIO {
-        SignalWatchDogIO::spawn(SIGHUP).unwrap()
+    fn latch_watchdog(&self) -> OsResult<SignalWatchDogIO> {
+        SignalWatchDogIO::spawn(SIGHUP)
     }
 
-    fn kill_child(&mut self) -> jaypty_core::Result<()> {
-        self.child.kill().map_err(|e| {
-            jaypty_core::error::Error::new(ChildError::UnableToGetExitCode.into(), None)
-        })
+    fn kill_child(&mut self) -> OsEmptyResult {
+        self.child.kill().map_err(SystemError::KillChildFailure)
     }
 
     fn cin(&mut self) -> &mut File {
@@ -145,11 +142,5 @@ impl UnDefinedPseudoTerminalIO<File, File, SignalWatchDogIO, SystemError> for Un
 
     fn cout(&mut self) -> &mut File {
         &mut self.io
-    }
-}
-
-impl Default for UnixPseudoTerminalIO {
-    fn default() -> Self {
-        Self::new(Options::default())
     }
 }
