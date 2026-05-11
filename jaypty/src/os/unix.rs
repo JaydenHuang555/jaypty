@@ -1,2 +1,2 @@
-pub type SystemPseudoTerminalIO = ();
+pub type SystemPseudoTerminalIO = unixpty::;
 pub type SystemWatchDogIO = ();
