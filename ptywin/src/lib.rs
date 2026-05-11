@@ -29,11 +29,7 @@ mod tests {
         time::{Duration, Instant},
     };
 
-    use jaypty_core::{child::ChildPollRegisterIO, io::PollingIntrestRegisterIO, tokens::Token};
-    use jaysync::io::{
-        ReadEventCapture, WriteEventCapture, WriteEvents,
-        nonblocking::{NonBlockingPipeReader, NonBlockingPipeWriter},
-    };
+    use jaypty_core::child::ChildPollRegisterIO;
     use polling::{Event, Events, Poller};
 
     use crate::child::WinChildWatchdogIO;

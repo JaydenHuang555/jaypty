@@ -2,21 +2,19 @@ use std::{
     ffi::c_void,
     io::{Read, Write},
     sync::{
+        Arc,
         atomic::AtomicPtr,
         mpsc::{self, Receiver, Sender},
     },
     task::Wake,
 };
 
-use jaypty_core::{Options, PseudoTerminalIO, io::PollingIntrestRegisterIO, tokens::Token};
-use jwinpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
-use miow::pipe::AnonRead;
-use polling::Event;
+use jaypty_core::{Options, PseudoTerminalIO, io::PollingIntrestRegisterIO};
+use polling::{Event, Poller};
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 
 use super::ContpyHandle;
 use crate::factory::ContpySpawn;
-use crate::{RegisteredPoll, poll::Polled};
 use crate::{child::WinChildWatchdogIO, factory};
 
 type R = factory::io::R;
