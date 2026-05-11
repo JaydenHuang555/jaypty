@@ -4,8 +4,8 @@ use std::{
 };
 
 use jaypty_core::{
-    EmptyResult, Error, ErrorFactory, FactoriedError, FactoriedErrorKind, Options,
-    PollRegisteringErrorKind, Result, UnDefinedPseudoTerminalIO, io::PollingIntrestRegisterIO,
+    EmptyResult, ErrorFactory, FactoriedErrorKind, Options, PollRegisteringErrorKind, Result,
+    UnDefinedPseudoTerminalIO, io::PollingIntrestRegisterIO,
 };
 use polling::{Event, Poller};
 
@@ -22,7 +22,7 @@ impl PseudoTermainalSubsystem {
             .map_err(|e| ErrorFactory::kind(FactoriedErrorKind::FailedPtyCreation).with_internal(e))
     }
 
-    unsafe fn register(
+    pub unsafe fn register(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
@@ -35,13 +35,13 @@ impl PseudoTermainalSubsystem {
         }
     }
 
-    fn unregister(&mut self, poller: &Arc<Poller>) -> EmptyResult {
+    pub fn unregister(&mut self, poller: &Arc<Poller>) -> EmptyResult {
         self.io
             .unregister(poller)
             .map_err(|e| ErrorFactory::kind(PollRegisteringErrorKind::DeRegister).with_internal(e))
     }
 
-    fn reregister(
+    pub fn reregister(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
@@ -52,29 +52,29 @@ impl PseudoTermainalSubsystem {
             .map_err(|e| ErrorFactory::kind(PollRegisteringErrorKind::ReRegister).with_internal(e))
     }
 
-    fn resize(&mut self, size: jaypty_core::PtySize) -> EmptyResult {
+    pub fn resize(&mut self, size: jaypty_core::PtySize) -> EmptyResult {
         self.io
             .resize(size)
             .map_err(|e| ErrorFactory::kind(FactoriedErrorKind::FailedPtyResize).with_internal(e))
     }
 
-    fn latch_watchdog(&self) -> Result<SystemWatchDogIO> {
+    pub fn latch_watchdog(&self) -> Result<SystemWatchDogIO> {
         self.io.latch_watchdog().map_err(|e| {
             ErrorFactory::kind(FactoriedErrorKind::ChildWatchDogLatchFailed).with_internal(e)
         })
     }
 
-    fn kill_child(&mut self) -> EmptyResult {
+    pub fn kill_child(&mut self) -> EmptyResult {
         self.io
             .kill_child()
             .map_err(|e| ErrorFactory::kind(FactoriedErrorKind::KillChildFailed).with_internal(e))
     }
 
-    fn cin(&mut self) -> &mut os::Cin {
+    pub fn cin(&mut self) -> &mut os::Cin {
         self.io.cin()
     }
 
-    fn cout(&mut self) -> &mut os::Cout {
+    pub fn cout(&mut self) -> &mut os::Cout {
         self.io.cout()
     }
 }
