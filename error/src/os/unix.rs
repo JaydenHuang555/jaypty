@@ -9,6 +9,12 @@ pub enum UnixPtyIOError {
     PollingChildIntrestFailure(io::Error),
     #[error("failed to spawn the cmd process with error {0}")]
     FailedSpawnProcess(io::Error),
+    #[error("failed to spawn listener for SIGCHLD with error {0}")]
+    SpawnChildExitListenerStreamFailure(io::Error),
+    #[error("failed to spawn listener for SIGCHLD with error {0}")]
+    SpawnChildPipeCallBackFailure(io::Error),
+    #[error("failed to kill child process with error {0}")]
+    KillChildFailure(io::Error),
 }
 
 pub use UnixPtyIOError as SystemError;
