@@ -103,7 +103,7 @@ impl PseudoTerminalIO<R, W, WinChildWatchdogIO> for ContpyPseudoTerminalIO {
         }
     }
 
-    fn spawn_and_latch_child_watchdog(&self) -> WinChildWatchdogIO {
+    fn latch_watchdog(&self) -> WinChildWatchdogIO {
         WinChildWatchdogIO::latch(self.child_handle.load(std::sync::atomic::Ordering::Relaxed))
     }
 

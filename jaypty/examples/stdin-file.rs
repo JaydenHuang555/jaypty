@@ -8,9 +8,7 @@ use std::{
     thread,
 };
 
-use jaypty::{
-    Options, Poller, PseudoTerminalIO, SystemPseudoTerminalIO, PollingIntrestRegisterIO,
-};
+use jaypty::{Options, Poller, PollingIntrestRegisterIO, PseudoTerminalIO, SystemPseudoTerminalIO};
 
 const RELAY_FNAME: &'static str = "RELAY";
 
@@ -21,7 +19,7 @@ fn stdin_relay() {
     let io = Arc::new(Mutex::new(SystemPseudoTerminalIO::new(Options::default())));
     let mut watch_dog = {
         let lock = io.lock().unwrap();
-        lock.spawn_and_latch_child_watchdog()
+        lock.latch_watchdog()
     };
     let poller = Arc::new(Poller::new().unwrap());
     let current_event = PollIntrest::readable(0);

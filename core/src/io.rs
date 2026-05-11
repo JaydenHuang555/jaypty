@@ -14,13 +14,13 @@ pub trait PollingIntrestRegisterIO {
     unsafe fn unregister(&mut self);
 }
 
-pub trait PseudoTerminalIO<R: Read, W: Write, ChildWatchdog: ChildWatchDogIO>:
+pub trait PseudoTerminalIO<R: Read, W: Write, WatchDog: ChildWatchDogIO>:
     PollingIntrestRegisterIO + Write + Read + Default
 {
     fn new(_options: Options) -> Self;
 
     fn resize(&mut self, _size: PtySize);
-    fn spawn_and_latch_child_watchdog(&self) -> ChildWatchdog;
+    fn latch_watchdog(&self) -> WatchDog;
     fn kill_child(&mut self) -> Result<()>;
 
     fn cin(&mut self) -> &mut W;
