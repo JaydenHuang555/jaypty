@@ -2,7 +2,6 @@ pub mod child;
 pub mod command;
 pub mod error;
 pub mod io;
-pub mod tokens;
 
 use std::path::PathBuf;
 
