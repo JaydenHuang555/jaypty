@@ -4,6 +4,7 @@ use thiserror::Error;
 
 use super::FactoriedErrorKind;
 
+#[derive(Debug)]
 pub struct FactoriedError<SystemError: Error> {
     pub(super) kind: FactoriedErrorKind,
     pub(super) internal: Option<SystemError>,
@@ -30,8 +31,8 @@ impl<SystemError: Error> FactoriedError<SystemError> {
     ) -> Self {
         Self {
             kind,
-            internal: internal,
-            errno: errno,
+            internal,
+            errno,
         }
     }
 
