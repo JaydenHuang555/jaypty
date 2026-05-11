@@ -1,6 +1,14 @@
-use crate::io::SafePseudoTerminalRegisterIO;
+use std::sync::Arc;
 
-pub trait ChildWatchDogIO: SafePseudoTerminalRegisterIO + Future {
+use polling::{Event, Poller};
+
+pub trait ChildPollRegisterIO {
+    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event);
+    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event);
+    unsafe fn unregister(&mut self, poller: &Arc<Poller>);
+}
+
+pub trait ChildWatchDogIO: ChildPollRegisterIO {
     fn status(&mut self) -> Option<crate::Result<u32>>;
 
     fn is_dead(&self) -> bool;
