@@ -2,21 +2,19 @@ use std::{
     ffi::c_void,
     io::{Read, Write},
     sync::{
+        Arc,
         atomic::AtomicPtr,
         mpsc::{self, Receiver, Sender},
     },
     task::Wake,
 };
 
-use jaypty_core::{Options, PseudoTerminalIO, io::PollingIntrestRegisterIO, tokens::Token};
-use jwinpipe::polling::{PollingWakingNonBlockingPipeReader, PollingWakingNonBlockingPipeWriter};
-use miow::pipe::AnonRead;
-use polling::Event;
+use jaypty_core::{Options, PseudoTerminalIO, io::PollingIntrestRegisterIO};
+use polling::{Event, Poller};
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 
 use super::ContpyHandle;
 use crate::factory::ContpySpawn;
-use crate::{RegisteredPoll, poll::Polled};
 use crate::{child::WinChildWatchdogIO, factory};
 
 type R = factory::io::R;
@@ -53,18 +51,16 @@ impl PollingIntrestRegisterIO for ContpyPseudoTerminalIO {
         intrest: Event,
         mode: Option<polling::PollMode>,
     ) {
-        self.cin
-            .register(poller, Token::CinWrite.keyify(intrest), mode);
-        self.cout
-            .register(poller, Token::CoutRead.keyify(intrest), mode);
+        self.cin.register(poller, intrest, mode);
+        self.cout.register(poller, intrest, mode);
     }
 
-    unsafe fn unregister(&mut self) {
+    fn unregister(&mut self, _: &Arc<Poller>) {
         self.cin.unregister();
         self.cout.unregister();
     }
 
-    unsafe fn reregister(
+    fn reregister(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
