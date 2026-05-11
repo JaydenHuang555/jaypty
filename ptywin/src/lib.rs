@@ -4,8 +4,6 @@ pub mod child;
 pub mod poll;
 
 #[cfg(windows)]
-pub mod error;
-#[cfg(windows)]
 pub mod factory;
 #[cfg(windows)]
 pub mod io;
@@ -17,7 +15,7 @@ pub(crate) mod uses;
 pub(crate) mod util;
 
 #[cfg(windows)]
-pub(crate) use uses::*;
+pub use uses::*;
 
 #[cfg(all(test, windows))]
 mod tests {
@@ -39,7 +37,7 @@ mod tests {
         const POLLING_TIMEOUT: Duration = Duration::from_millis(400);
 
         let mut child = std::process::Command::new("cmd.exe").spawn().unwrap();
-        let mut watchdog = WinChildWatchdogIO::latch(child.as_raw_handle() as HANDLE);
+        let mut watchdog = WinChildWatchdogIO::latch(child.as_raw_handle() as HANDLE).unwrap();
         let poller = Arc::new(Poller::new().unwrap());
         unsafe {
             watchdog.register(&poller, Event::readable(0));

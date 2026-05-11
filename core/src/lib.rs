@@ -1,14 +1,13 @@
 pub mod child;
 pub mod command;
-pub mod error;
 pub mod io;
 
 use std::path::PathBuf;
 
-pub use io::PseudoTerminalIO;
+pub use io::UnDefinedPseudoTerminalIO;
 
 use crate::command::Command;
-pub use crate::error::Result;
+pub use jaypty_error::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Options {

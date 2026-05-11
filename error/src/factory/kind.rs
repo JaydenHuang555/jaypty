@@ -1,9 +1,27 @@
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, Error, PartialEq, Eq)]
+pub enum PollRegisteringErrorKind {
+    #[error("registering")]
+    Register,
+    #[error("reregistering")]
+    ReRegister,
+    #[error("deregistering")]
+    DeRegister,
+}
+
+#[derive(Clone, Copy, Debug, Error, PartialEq, Eq)]
 pub enum FactoriedErrorKind {
     #[error("Failed to create Pty")]
     FailedPtyCreation,
+    #[error("Failed pty resize")]
+    FailedPtyResize,
+    #[error("failed to latch child watch dog")]
+    ChildWatchDogLatchFailed,
+    #[error("failed to kill child")]
+    KillChildFailed,
+    #[error("encountered error when {0} intrest")]
+    PollRegisteringFailed(#[from] PollRegisteringErrorKind),
 
     /// THESE SHOULD NEVER BE PART OF A PR!!
     /// THESE ARE JUST FOR PLACE HOLDER VALUES

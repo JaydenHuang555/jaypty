@@ -4,13 +4,13 @@ use thiserror::Error;
 
 use super::FactoriedErrorKind;
 
-pub struct FactoriedError<SystemError: Error + Clone> {
+pub struct FactoriedError<SystemError: Error> {
     pub(super) kind: FactoriedErrorKind,
     pub(super) internal: Option<SystemError>,
     pub(super) errno: Option<i32>,
 }
 
-impl<SystemError: Error + Clone> FactoriedError<SystemError> {
+impl<SystemError: Error> FactoriedError<SystemError> {
     pub fn new<S: Into<Option<SystemError>>>(
         kind: FactoriedErrorKind,
         internal: S,

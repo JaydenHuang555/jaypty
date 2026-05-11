@@ -8,7 +8,9 @@ use std::{
     thread,
 };
 
-use jaypty::{Options, Poller, PollingIntrestRegisterIO, PseudoTerminalIO, SystemPseudoTerminalIO};
+use jaypty::{
+    Options, Poller, PollingIntrestRegisterIO, SystemPseudoTerminalIO, UnDefinedPseudoTerminalIO,
+};
 
 const RELAY_FNAME: &'static str = "RELAY";
 
@@ -16,7 +18,9 @@ const RELAY_FNAME: &'static str = "RELAY";
 #[cfg(windows)]
 fn stdin_relay() {
     File::create(RELAY_FNAME).unwrap();
-    let io = Arc::new(Mutex::new(SystemPseudoTerminalIO::new(Options::default())));
+    let io = Arc::new(Mutex::new(
+        SystemPseudoTerminalIO::new(Options::default()).unwrap(),
+    ));
     let mut watch_dog = {
         let lock = io.lock().unwrap();
         lock.latch_watchdog()
@@ -83,15 +87,14 @@ fn stdin_relay() {
                         }
                     }
                 }
-                unsafe {
-                    io.lock()
-                        .unwrap()
-                        .reregister(&read_poller, PollIntrest::readable(0), None);
-                }
+                io.lock()
+                    .unwrap()
+                    .reregister(&read_poller, PollIntrest::readable(0), None)
+                    .ok();
             }
         }
     });
-    watch_dog.wait();
+    watch_dog.unwrap().wait();
 }
 
 pub fn main() {

@@ -4,5 +4,9 @@ pub(crate) use crate::symbols::loaded_symbols;
 
 pub use crate::poll::RegisteredPoll;
 
-pub use jaypty_core::error::Error;
-pub use jaypty_core::error::Result;
+pub type Cin = PollingWakingNonBlockingPipeWriter<AnonWrite>;
+pub type Cout = PollingWakingNonBlockingPipeReader<AnonRead>;
+use jwinpipe::polling::PollingWakingNonBlockingPipeReader;
+use jwinpipe::polling::PollingWakingNonBlockingPipeWriter;
+use miow::pipe::AnonRead;
+use miow::pipe::AnonWrite;

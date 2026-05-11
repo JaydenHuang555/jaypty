@@ -3,7 +3,7 @@ use std::{error::Error, fmt::Display};
 mod kind;
 mod output;
 
-pub use kind::FactoriedErrorKind;
+pub use kind::*;
 pub use output::FactoriedError;
 
 impl<S: Error + Clone> Display for FactoriedError<S> {
@@ -19,7 +19,7 @@ impl<S: Error + Clone> Display for FactoriedError<S> {
 pub struct ErrorFactory {}
 
 impl ErrorFactory {
-    pub const fn kind_const<S: Error + Clone>(kind: FactoriedErrorKind) -> FactoriedError<S> {
+    pub const fn kind_const<S: Error>(kind: FactoriedErrorKind) -> FactoriedError<S> {
         FactoriedError {
             kind,
             internal: None,
@@ -27,7 +27,7 @@ impl ErrorFactory {
         }
     }
 
-    pub fn kind<S: Error + Clone>(kind: impl Into<FactoriedErrorKind>) -> FactoriedError<S> {
+    pub fn kind<S: Error>(kind: impl Into<FactoriedErrorKind>) -> FactoriedError<S> {
         FactoriedError {
             kind: kind.into(),
             internal: None,
@@ -35,7 +35,7 @@ impl ErrorFactory {
         }
     }
 
-    pub fn place_holder_const<S: Error + Clone>(msg: &'static str) -> FactoriedError<S> {
+    pub fn place_holder_const<S: Error>(msg: &'static str) -> FactoriedError<S> {
         FactoriedError {
             kind: FactoriedErrorKind::PlaceHolderContext(msg),
             internal: None,
@@ -43,7 +43,7 @@ impl ErrorFactory {
         }
     }
 
-    pub fn place_holder<S: Error + Clone>(msg: impl Into<&'static str>) -> FactoriedError<S> {
+    pub fn place_holder<S: Error>(msg: impl Into<&'static str>) -> FactoriedError<S> {
         FactoriedError {
             kind: FactoriedErrorKind::PlaceHolderContext(msg.into()),
             internal: None,

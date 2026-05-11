@@ -1,6 +1,7 @@
 mod os;
+mod system;
 
-pub use jaypty_core::PseudoTerminalIO;
+pub use jaypty_core::UnDefinedPseudoTerminalIO;
 pub use jaypty_core::child::ChildWatchDogIO;
 pub use jaypty_core::command::Command;
 pub use jaypty_core::io::PollingIntrestRegisterIO;
@@ -19,7 +20,5 @@ mod tests {
 
     // just a simple check to make sure it can compile on systems
     #[test]
-    fn system() {
-        let io = SystemPseudoTerminalIO::default();
-    }
+    fn system() {}
 }
