@@ -13,10 +13,7 @@ use std::{
     time::Duration,
 };
 
-use jaypty_core::{
-    child::{ChildPollRegisterIO, ChildWatchDogIO},
-    tokens::Token,
-};
+use jaypty_core::child::{ChildPollRegisterIO, ChildWatchDogIO};
 use jaysync::{mpsc::PeekableReciever, wake::ThreadWaker};
 use polling::{
     Event, Poller,
