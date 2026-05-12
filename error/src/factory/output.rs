@@ -1,10 +1,8 @@
 use std::error::Error;
 
-use thiserror::Error;
-
 use super::FactoriedErrorKind;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct FactoriedError<SystemError: Error> {
     pub(super) kind: FactoriedErrorKind,
     pub(super) internal: Option<SystemError>,

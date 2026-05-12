@@ -1,5 +1,7 @@
 use crate::Cin;
 use crate::Cout;
+use crate::child::ConsumedPosixChildConsumer;
+use crate::child::killer::ConsumedPosixChildKiller;
 use std::{
     fs::File,
     io::{Read, Write},
@@ -8,6 +10,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use jaypty_core::child::consume::ConsumedChildConsumer;
 use jaypty_core::{
     Options, OsEmptyResult, OsResult, SystemError, UnDefinedPseudoTerminalIO,
     io::PollingIntrestRegisterIO,
@@ -15,32 +18,24 @@ use jaypty_core::{
 use libc::{F_GETFL, F_SETFL, FILE, O_NONBLOCK, SIGCHLD, SIGHUP, fcntl, winsize};
 use polling::Poller;
 use rustix::{fs::openat, io};
-use signal_hook::{
-    SigId,
-    flag::register,
-    low_level::{pipe, unregister},
-};
 
 use crate::{
     Error, Pty,
+    child::watchdog::SignalWatchDogIO,
     factory::{self, Account},
-    watchdog::SignalWatchDogIO,
 };
 
 pub struct UnixPseudoTerminalIO {
-    child: Child,
+    child: Option<Child>,
     io: File,
 }
 
 impl Drop for UnixPseudoTerminalIO {
     fn drop(&mut self) {
-        unsafe {
-            libc::kill(self.child.id() as i32, SIGHUP);
+        if let Some(mut child) = self.child.take() {
+            let _ = unsafe { libc::kill(child.id() as i32, SIGHUP) };
+            let _ = child.wait();
         }
-        // On some systems, calling wait or similar is necessary for the OS to release resources.
-        // A process that terminated but has not been waited on is still around as a "zombie".
-        // Leaving too many zombies around may exhaust global resources (for example process IDs).
-        self.child.wait().expect("failed to wait for child to exit");
     }
 }
 
@@ -99,7 +94,16 @@ impl PollingIntrestRegisterIO<SystemError> for UnixPseudoTerminalIO {
     }
 }
 
-impl UnDefinedPseudoTerminalIO<Cout, Cin, SignalWatchDogIO, SystemError> for UnixPseudoTerminalIO {
+impl
+    UnDefinedPseudoTerminalIO<
+        Cout,
+        Cin,
+        SignalWatchDogIO,
+        SystemError,
+        ConsumedPosixChildKiller,
+        ConsumedPosixChildConsumer,
+    > for UnixPseudoTerminalIO
+{
     fn new(options: Options) -> OsResult<Self> {
         let mut pty = Pty::spawn().map_err(Error::CreatePty).unwrap();
 
@@ -110,7 +114,7 @@ impl UnDefinedPseudoTerminalIO<Cout, Cin, SignalWatchDogIO, SystemError> for Uni
                 pty.set_master_nonblocking();
 
                 Ok(Self {
-                    child,
+                    child: Some(child),
                     io: File::from(pty.master),
                 })
             }
@@ -130,11 +134,15 @@ impl UnDefinedPseudoTerminalIO<Cout, Cin, SignalWatchDogIO, SystemError> for Uni
     }
 
     fn latch_watchdog(&self) -> OsResult<SignalWatchDogIO> {
-        SignalWatchDogIO::spawn(SIGHUP)
+        SignalWatchDogIO::spawn()
     }
 
     fn kill_child(&mut self) -> OsEmptyResult {
-        self.child.kill().map_err(SystemError::KillChildFailure)
+        if let Some(mut child) = self.child.take() {
+            let _ = unsafe { libc::kill(child.id() as i32, SIGHUP) };
+            let _ = child.wait();
+        }
+        Ok(())
     }
 
     fn cin(&mut self) -> &mut Cin {
@@ -143,5 +151,9 @@ impl UnDefinedPseudoTerminalIO<Cout, Cin, SignalWatchDogIO, SystemError> for Uni
 
     fn cout(&mut self) -> &mut Cout {
         &mut self.io
+    }
+
+    fn consume_child(&mut self) -> Option<ConsumedPosixChildConsumer> {
+        self.child.take().map(|c| ConsumedPosixChildConsumer(c))
     }
 }

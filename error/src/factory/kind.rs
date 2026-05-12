@@ -22,6 +22,8 @@ pub enum FactoriedErrorKind {
     KillChildFailed,
     #[error("encountered error when {0} intrest")]
     PollRegisteringFailed(#[from] PollRegisteringErrorKind),
+    #[error("encountered error when killing child")]
+    ChildKillFailed,
 
     /// THESE SHOULD NEVER BE PART OF A PR!!
     /// THESE ARE JUST FOR PLACE HOLDER VALUES

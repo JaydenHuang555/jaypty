@@ -15,6 +15,8 @@ pub enum UnixPtyIOError {
     SpawnChildPipeCallBackFailure(io::Error),
     #[error("failed to kill child process with error {0}")]
     KillChildFailure(io::Error),
+    #[error("failed to wait for the child process to release resources with error {0}")]
+    WaitChildRelease(io::Error),
 }
 
 pub use UnixPtyIOError as SystemError;

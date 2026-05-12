@@ -3,13 +3,16 @@ use std::{
     sync::Arc,
 };
 
+use jaypty_core::ErrorFactory;
+use jaypty_core::FactoriedErrorKind;
+use jaypty_core::PollRegisteringErrorKind;
 use jaypty_core::{
-    EmptyResult, ErrorFactory, FactoriedErrorKind, Options, PollRegisteringErrorKind, Result,
-    UnDefinedPseudoTerminalIO, io::PollingIntrestRegisterIO,
+    EmptyResult, Options, Result, UnDefinedPseudoTerminalIO, io::PollingIntrestRegisterIO,
 };
 use polling::{Event, Poller};
 
-use crate::{SystemPseudoTerminalIO, SystemWatchDogIO, os};
+use crate::os;
+use crate::os::*;
 
 pub struct PseudoTermainalSubsystem {
     io: SystemPseudoTerminalIO,
@@ -64,10 +67,8 @@ impl PseudoTermainalSubsystem {
         })
     }
 
-    pub fn kill_child(&mut self) -> EmptyResult {
-        self.io
-            .kill_child()
-            .map_err(|e| ErrorFactory::kind(FactoriedErrorKind::KillChildFailed).with_internal(e))
+    pub fn consume_child(&mut self) -> Option<os::ConsumedChildConsumer> {
+        self.io.consume_child()
     }
 
     pub fn cin(&mut self) -> &mut os::Cin {

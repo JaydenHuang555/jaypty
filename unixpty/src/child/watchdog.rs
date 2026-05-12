@@ -1,6 +1,7 @@
 use std::{
     ffi::c_int,
     io::{ErrorKind, Read},
+    marker::PhantomData,
     os::unix::net::UnixStream,
     sync::mpsc::Receiver,
     time::Duration,
@@ -10,7 +11,7 @@ use jaypty_core::{
     OsEmptyResult, OsError, OsResult, SystemError,
     child::{ChildPollRegisterIO, ChildStatus, ChildWatchDogIO},
 };
-use libc::SIGCHLD;
+use libc::{SIGCHLD, SIGHUP};
 use polling::{PollMode, Poller};
 use signal_hook::{
     SigId,
@@ -30,11 +31,11 @@ impl Drop for SignalWatchDogIO {
 }
 
 impl SignalWatchDogIO {
-    pub fn spawn(signal: c_int) -> OsResult<Self> {
+    pub fn spawn() -> OsResult<Self> {
         let (pipe, listener) =
             UnixStream::pair().map_err(SystemError::SpawnChildExitListenerStreamFailure)?;
         let sig_id =
-            pipe::register(signal, pipe).map_err(SystemError::SpawnChildPipeCallBackFailure)?;
+            pipe::register(SIGCHLD, pipe).map_err(SystemError::SpawnChildPipeCallBackFailure)?;
         listener
             .set_nonblocking(true)
             .map_err(SystemError::SpawnChildExitListenerStreamFailure)?;
@@ -54,7 +55,7 @@ impl ChildPollRegisterIO<OsError> for SignalWatchDogIO {
     ) -> OsEmptyResult {
         unsafe {
             poller
-                .add(&self.listener, intrest)
+                .add_with_mode(&self.listener, intrest, PollMode::Level)
                 .map_err(SystemError::PollingChildIntrestFailure)
         }
     }
@@ -65,7 +66,7 @@ impl ChildPollRegisterIO<OsError> for SignalWatchDogIO {
         intrest: polling::Event,
     ) -> OsEmptyResult {
         poller
-            .modify(&self.listener, intrest)
+            .modify_with_mode(&self.listener, intrest, PollMode::Level)
             .map_err(SystemError::PollingChildIntrestFailure)
     }
 
@@ -81,16 +82,14 @@ impl ChildWatchDogIO<SystemError> for SignalWatchDogIO {
     /// if it does exit
     fn status(&mut self) -> OsResult<ChildStatus> {
         if self.status.is_dead() {
-            return Ok(self.status);
+            Ok(self.status)
         } else {
             let mut buff = [0u8; 1];
             match self.listener.read(&mut buff) {
-                Ok(n) => {
-                    if n > 0 {
-                        self.status = ChildStatus::Dead(0);
-                    }
+                Ok(n) if n > 0 => {
+                    self.status = ChildStatus::Dead(0);
                 }
-                Err(_) => {}
+                _ => {}
             }
             Ok(self.status)
         }
@@ -108,12 +107,10 @@ impl ChildWatchDogIO<SystemError> for SignalWatchDogIO {
         let last_status = self.status;
         loop {
             std::thread::sleep(Duration::from_millis(200));
-            if self.status()? != last_status {
-                if self.status.is_dead() {
-                    break;
-                }
+            if self.status()? != last_status && self.status.is_dead() {
+                break;
             }
         }
-        return Ok(self.status);
+        Ok(self.status)
     }
 }

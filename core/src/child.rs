@@ -1,11 +1,14 @@
 use std::{error::Error, sync::Arc};
 
+pub mod consume;
+pub mod killer;
+
 use jaypty_error::{EmptyResult, OsEmptyResult, OsResult};
 use polling::{Event, Poller};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChildStatus {
-    Dead(u32),
+    Dead(i32),
     Alive,
     Orphaned,
 }

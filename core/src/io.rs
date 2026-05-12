@@ -9,7 +9,10 @@ use polling::{Event, PollMode, Poller};
 
 use jaypty_error::{OsEmptyResult, OsResult};
 
-use crate::{EmptyResult, Options, PtySize, child::ChildWatchDogIO};
+use crate::{
+    EmptyResult, Options, PtySize,
+    child::{ChildWatchDogIO, consume::ConsumedChildConsumer, killer::ConsumedChildKiller},
+};
 
 pub trait PollingIntrestRegisterIO<E: Error> {
     unsafe fn register(
@@ -27,9 +30,14 @@ pub trait PollingIntrestRegisterIO<E: Error> {
     fn unregister(&mut self, poller: &Arc<Poller>) -> result::Result<(), E>;
 }
 
-pub trait UnDefinedPseudoTerminalIO<R: Read, W: Write, WatchDog: ChildWatchDogIO<E>, E: Error>:
-    PollingIntrestRegisterIO<E> + Write + Read
-where
+pub trait UnDefinedPseudoTerminalIO<
+    R: Read,
+    W: Write,
+    WatchDog: ChildWatchDogIO<E>,
+    E: Error,
+    ChildKiller: ConsumedChildKiller,
+    ConsChild: ConsumedChildConsumer<ChildKiller>,
+>: PollingIntrestRegisterIO<E> + Write + Read where
     Self: Sized,
 {
     fn new(_options: Options) -> Result<Self, E>;
@@ -40,4 +48,6 @@ where
 
     fn cin(&mut self) -> &mut W;
     fn cout(&mut self) -> &mut R;
+
+    fn consume_child(&mut self) -> Option<ConsChild>;
 }
