@@ -222,6 +222,7 @@ dependencies = [
  "jaypty_core",
  "polling",
  "ptywin",
+ "unixpty",
 ]
 
 [[package]]
@@ -229,9 +230,17 @@ name = "jaypty_core"
 version = "0.0.1"
 dependencies = [
  "bitflags",
+ "jaypty_error",
  "jaysync",
  "polling",
  "strum",
+ "thiserror",
+]
+
+[[package]]
+name = "jaypty_error"
+version = "0.1.0"
+dependencies = [
  "thiserror",
 ]
 
@@ -406,6 +415,7 @@ version = "0.0.1"
 dependencies = [
  "env_logger",
  "jaypty_core",
+ "jaypty_error",
  "jaysync",
  "jwinpipe",
  "log",

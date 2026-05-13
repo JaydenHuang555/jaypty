@@ -9,13 +9,17 @@ use std::{
     task::Wake,
 };
 
-use jaypty_core::{Options, PseudoTerminalIO, io::PollingIntrestRegisterIO};
+use jaypty_core::{Options, Result, UnDefinedPseudoTerminalIO, io::PollingIntrestRegisterIO};
+use jaypty_error::{OsEmptyResult, OsResult, SystemError};
 use polling::{Event, Poller};
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 
 use super::ContpyHandle;
-use crate::factory::ContpySpawn;
 use crate::{child::WinChildWatchdogIO, factory};
+use crate::{
+    child::{consume::ConsumedContpyConsumer, killer::ConsumedContpyChildKiller},
+    factory::ContpySpawn,
+};
 
 type R = factory::io::R;
 type W = factory::io::W;
@@ -35,29 +39,24 @@ impl Drop for ContpyPseudoTerminalIO {
     }
 }
 
-impl Default for ContpyPseudoTerminalIO {
-    fn default() -> Self {
-        let options = Options::default();
-        ContpyPseudoTerminalIO::new(options)
-    }
-}
-
 unsafe impl Send for ContpyPseudoTerminalIO {}
 
-impl PollingIntrestRegisterIO for ContpyPseudoTerminalIO {
+impl PollingIntrestRegisterIO<SystemError> for ContpyPseudoTerminalIO {
     unsafe fn register(
         &mut self,
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
         mode: Option<polling::PollMode>,
-    ) {
+    ) -> OsEmptyResult {
         self.cin.register(poller, intrest, mode);
         self.cout.register(poller, intrest, mode);
+        Ok(())
     }
 
-    fn unregister(&mut self, _: &Arc<Poller>) {
+    fn unregister(&mut self, _: &Arc<Poller>) -> OsEmptyResult {
         self.cin.unregister();
         self.cout.unregister();
+        Ok(())
     }
 
     fn reregister(
@@ -65,29 +64,36 @@ impl PollingIntrestRegisterIO for ContpyPseudoTerminalIO {
         poller: &std::sync::Arc<polling::Poller>,
         intrest: Event,
         mode: Option<polling::PollMode>,
-    ) {
-        unsafe {
-            self.register(poller, intrest, mode);
-        }
+    ) -> OsEmptyResult {
+        unsafe { self.register(poller, intrest, mode) }
     }
 }
 
-impl PseudoTerminalIO<R, W, WinChildWatchdogIO> for ContpyPseudoTerminalIO {
-    fn new(options: jaypty_core::Options) -> Self {
-        let mut spawn = ContpySpawn::spawn(options);
-        let child_handle = factory::watch(&mut spawn);
-        let cin = factory::cin(&mut spawn);
-        let cout = factory::cout(&mut spawn);
+impl
+    UnDefinedPseudoTerminalIO<
+        R,
+        W,
+        WinChildWatchdogIO,
+        SystemError,
+        ConsumedContpyChildKiller,
+        ConsumedContpyConsumer,
+    > for ContpyPseudoTerminalIO
+{
+    fn new(options: jaypty_core::Options) -> OsResult<Self> {
+        let mut spawn = ContpySpawn::spawn(options)?;
+        let child_handle = factory::watch(&mut spawn)?;
+        let cin = factory::cin(&mut spawn)?;
+        let cout = factory::cout(&mut spawn)?;
 
-        Self {
+        Ok(Self {
             cin,
             cout,
             handle: spawn.handle.take().expect("unable to take handle"),
             child_handle,
-        }
+        })
     }
 
-    fn resize(&mut self, size: jaypty_core::PtySize) {
+    fn resize(&mut self, size: jaypty_core::PtySize) -> OsResult<()> {
         unsafe {
             super::loaded_symbols().resize(
                 self.handle,
@@ -97,13 +103,14 @@ impl PseudoTerminalIO<R, W, WinChildWatchdogIO> for ContpyPseudoTerminalIO {
                 },
             );
         }
+        Ok(())
     }
 
-    fn latch_watchdog(&self) -> WinChildWatchdogIO {
+    fn latch_watchdog(&self) -> OsResult<WinChildWatchdogIO> {
         WinChildWatchdogIO::latch(self.child_handle.load(std::sync::atomic::Ordering::Relaxed))
     }
 
-    fn kill_child(&mut self) -> jaypty_core::Result<()> {
+    fn kill_child(&mut self) -> OsEmptyResult {
         let _ = unsafe {
             TerminateProcess(
                 self.child_handle.load(std::sync::atomic::Ordering::Relaxed),
@@ -119,6 +126,12 @@ impl PseudoTerminalIO<R, W, WinChildWatchdogIO> for ContpyPseudoTerminalIO {
 
     fn cout(&mut self) -> &mut R {
         &mut self.cout
+    }
+
+    fn consume_child(&mut self) -> Option<ConsumedContpyConsumer> {
+        Some(ConsumedContpyConsumer(AtomicPtr::from(
+            self.child_handle.load(std::sync::atomic::Ordering::Relaxed),
+        )))
     }
 }
 

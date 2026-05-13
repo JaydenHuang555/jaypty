@@ -1,3 +1,6 @@
+pub mod consume;
+pub mod killer;
+
 use std::{
     ffi::c_void,
     future::Pending,
@@ -6,14 +9,18 @@ use std::{
     sync::{
         Arc, Mutex,
         atomic::{AtomicPtr, Ordering},
-        mpsc::{self, Receiver, RecvError, Sender},
+        mpsc::{self, Receiver, RecvError, Sender, TryRecvError},
     },
     task::Poll,
     thread,
     time::Duration,
 };
 
-use jaypty_core::child::{ChildPollRegisterIO, ChildWatchDogIO};
+use jaypty_core::{
+    EmptyResult,
+    child::{ChildPollRegisterIO, ChildStatus, ChildWatchDogIO},
+};
+use jaypty_error::{OsEmptyResult, OsError, OsResult, SystemError};
 use jaysync::{mpsc::PeekableReciever, wake::ThreadWaker};
 use polling::{
     Event, Poller,
@@ -28,14 +35,7 @@ use windows_sys::Win32::{
     },
 };
 
-use crate::Result;
-use crate::{Error, error::ChildError};
-
-#[derive(Clone, Debug)]
-pub enum Message {
-    ChildExit(Result<u32>),
-    WaitUnRegistered(i32),
-}
+pub type ChildHandle = AtomicPtr<c_void>;
 
 struct Intrest {
     event: Event,
@@ -52,7 +52,7 @@ impl Intrest {
 }
 
 struct SentPacket {
-    queuer: Sender<Message>,
+    queuer: Sender<ChildStatus>,
     intrest: Arc<Mutex<Option<Intrest>>>,
     child_handle: AtomicPtr<c_void>,
 }
@@ -61,9 +61,9 @@ pub struct WinChildWatchdogIO {
     pid: Option<NonZeroU32>,
     child_handle: Arc<AtomicPtr<c_void>>,
     wait_handle: AtomicPtr<c_void>,
-    tx: Sender<Message>,
-    rx: PeekableReciever<Message>,
-    exit_status: Option<Result<u32>>,
+    tx: Sender<ChildStatus>,
+    rx: Receiver<ChildStatus>,
+    exit_status: ChildStatus,
     intrest: Arc<Mutex<Option<Intrest>>>,
 }
 
@@ -79,7 +79,7 @@ impl Drop for WinChildWatchdogIO {
 }
 
 impl WinChildWatchdogIO {
-    pub fn latch(handle: HANDLE) -> Self {
+    pub fn latch(handle: HANDLE) -> OsResult<Self> {
         let (tx, rx) = mpsc::channel();
 
         let pid = unsafe { NonZeroU32::new(GetProcessId(handle)) };
@@ -94,13 +94,6 @@ impl WinChildWatchdogIO {
             unsafe {
                 let exit_stat = GetExitCodeProcess(child_handle, &mut exit_code);
                 if exit_stat == STILL_ACTIVE {
-                    packet
-                        .queuer
-                        .send(Message::ChildExit(Err(Error::kind(
-                            ChildError::AliveDuringExitCallBack,
-                        )
-                        .context("the child is still alive on the exit call back"))))
-                        .expect("unable to send fail packet");
                     return;
                 }
             }
@@ -111,7 +104,7 @@ impl WinChildWatchdogIO {
                     .post(CompletionPacket::new(intrest.event))
                     .unwrap();
             }
-            if let Err(e) = packet.queuer.send(Message::ChildExit(Ok(exit_code))) {
+            if let Err(e) = packet.queuer.send(ChildStatus::Dead(exit_code as i32)) {
                 log::error!("found error with {}", e);
                 panic!("FOUND ERROR IN CHILD WATCHDOG THREAD WHEN SENDING PACKET: ({e})")
             }
@@ -139,84 +132,77 @@ impl WinChildWatchdogIO {
             ) && stat == 0
             {}
         }
-        Self {
+        Ok(Self {
             pid,
             child_handle: Arc::new(AtomicPtr::from(handle)),
             wait_handle: AtomicPtr::from(wait_handle),
-            rx: PeekableReciever::new(rx),
-            exit_status: None,
+            exit_status: ChildStatus::Alive,
+            rx,
             intrest,
             tx,
-        }
+        })
     }
 }
 
-impl ChildPollRegisterIO for WinChildWatchdogIO {
-    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event) {
-        let mut lock = self.intrest.lock().unwrap();
+impl ChildPollRegisterIO<OsError> for WinChildWatchdogIO {
+    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event) -> OsEmptyResult {
+        let mut lock = self
+            .intrest
+            .lock()
+            .map_err(|_| SystemError::ChildWatchDogRegisterMutexPoison)?;
         *lock = Some(Intrest {
             event: intrest,
             poller: poller.clone(),
-        })
-    }
-
-    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event) {
-        let mut lock = self.intrest.lock().unwrap();
-        *lock = Some(Intrest {
-            event: intrest,
-            poller: poller.clone(),
-        })
-    }
-
-    unsafe fn unregister(&mut self, _: &Arc<Poller>) {
-        let mut lock = self.intrest.lock().unwrap();
-        *lock = None;
-    }
-}
-
-impl ChildWatchDogIO for WinChildWatchdogIO {
-    fn status(&mut self) -> Option<jaypty_core::Result<u32>> {
-        self.exit_status = self.exit_status.take().or_else(|| {
-            self.rx
-                .pop()
-                .map(|m| match m {
-                    Message::ChildExit(stat) => Some(stat),
-                    _ => None,
-                })
-                .unwrap_or(None)
         });
-        self.exit_status.clone()
+        Ok(())
     }
 
-    fn is_dead(&self) -> bool {
-        self.exit_status.is_some()
+    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event) -> OsEmptyResult {
+        let mut lock = self
+            .intrest
+            .lock()
+            .map_err(|_| SystemError::ChildWatchDogRegisterMutexPoison)?;
+        *lock = Some(Intrest {
+            event: intrest,
+            poller: poller.clone(),
+        });
+        Ok(())
     }
 
-    fn wait(&mut self) {
-        loop {
-            match self.status() {
-                None => {}
-                Some(_) => break,
-            }
-            thread::sleep(Duration::from_millis(300));
-        }
+    unsafe fn unregister(&mut self, _: &Arc<Poller>) -> OsEmptyResult {
+        let mut lock = self
+            .intrest
+            .lock()
+            .map_err(|_| SystemError::ChildWatchDogRegisterMutexPoison)?;
+        *lock = None;
+        Ok(())
     }
 }
 
-impl Future for WinChildWatchdogIO {
-    fn poll(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Self::Output> {
-        match self.status() {
-            None => Poll::Pending,
-            Some(_) => {
-                let waker = cx.waker().clone();
-                waker.wake();
-                Poll::Ready(Ok(()))
+impl ChildWatchDogIO<OsError> for WinChildWatchdogIO {
+    fn status(&mut self) -> OsResult<ChildStatus> {
+        if self.exit_status.is_dead() {
+            Ok(self.exit_status)
+        } else {
+            match self.rx.try_recv() {
+                Ok(stat) => {
+                    self.exit_status = stat;
+                    Ok(self.exit_status)
+                }
+                Err(TryRecvError::Disconnected) => {
+                    Err(SystemError::ChildWatchDogChannelDisconnected)
+                }
+
+                Err(TryRecvError::Empty) => Ok(self.exit_status),
             }
         }
     }
 
-    type Output = Result<()>;
+    fn is_dead(&self) -> OsResult<ChildStatus> {
+        todo!()
+    }
+
+    fn wait(&mut self) -> OsResult<ChildStatus> {
+        todo!()
+    }
 }

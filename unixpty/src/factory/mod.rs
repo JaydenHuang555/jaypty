@@ -59,13 +59,17 @@ pub fn build_cmd(options: &Options, pty: &Pty) -> Result<Command> {
 
     unsafe {
         process_builder.pre_exec(move || {
+            let e = libc::setsid();
+            if e == -1 {
+                panic!("unable to set up sid");
+            }
             cwd.take().map(|cwd| {
                 CString::new(cwd.as_os_str().as_bytes()).ok().map(|str| {
                     libc::chdir(str.as_ptr());
                 });
             });
 
-            libc::ioctl(slave, TIOCSCTTY);
+            libc::ioctl(slave, TIOCSCTTY as _, 0);
 
             libc::close(master);
             libc::close(slave);
@@ -85,5 +89,5 @@ pub fn build_cmd(options: &Options, pty: &Pty) -> Result<Command> {
 }
 
 pub unsafe fn set_to_nonblocking(fd: c_int) -> i32 {
-    unsafe { fcntl(fd, F_SETFL | fcntl(fd, F_GETFL) | O_NONBLOCK) }
+    unsafe { fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) }
 }

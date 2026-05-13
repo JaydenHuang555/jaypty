@@ -1,3 +1,9 @@
+pub use crate::defs::*;
 pub(crate) use crate::err::Error;
 pub(crate) use crate::err::Result;
 pub(crate) use crate::factory::pty::Pty;
+pub use crate::io::UnixPseudoTerminalIO;
+pub use jaypty_core::child::ChildPollRegisterIO;
+pub use jaypty_core::child::ChildWatchDogIO;
+pub use jaypty_core::child::consume::ConsumedChildConsumer;
+pub use jaypty_core::child::killer::ConsumedChildKiller;

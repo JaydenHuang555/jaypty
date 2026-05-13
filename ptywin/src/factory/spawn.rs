@@ -1,4 +1,5 @@
 use crate::util::sanitize_string;
+use jaypty_error::{ErrorFactory, FactoriedError, FactoriedErrorKind, OsResult, SystemError};
 use miow::pipe::{AnonRead, AnonWrite};
 use polling::{Event, PollMode, Poller};
 use std::io::{PipeReader, Read, Write};
@@ -18,7 +19,7 @@ use windows_sys::{
     core::PWSTR,
 };
 
-use jaypty_core::{PseudoTerminalIO, PtySize};
+use jaypty_core::{PtySize, UnDefinedPseudoTerminalIO};
 use windows_sys::{
     Win32::{
         Foundation::HANDLE,
@@ -53,14 +54,16 @@ pub struct ContpySpawn {
 unsafe impl Send for ContpySpawn {}
 
 impl ContpySpawn {
-    pub fn spawn(options: jaypty_core::Options) -> Self {
+    pub fn spawn(options: jaypty_core::Options) -> OsResult<Self> {
         let dimensions = options.dimension;
         let symbols = unsafe { ContpySymbols::instance() };
         let mut pty_handle: ContpyHandle = 0;
 
-        let (cout, pty_output) = miow::pipe::anonymous(0).unwrap();
+        let (cout, pty_output) =
+            miow::pipe::anonymous(0).map_err(|e| SystemError::FailedSpawningIOPipes(e))?;
 
-        let (pty_input, cin) = miow::pipe::anonymous(0).unwrap();
+        let (pty_input, cin) =
+            miow::pipe::anonymous(0).map_err(|e| SystemError::FailedSpawningIOPipes(e))?;
         let size = COORD {
             X: dimensions.columns as i16,
             Y: dimensions.rows as i16,
@@ -75,7 +78,7 @@ impl ContpySpawn {
             ) && result != S_OK
             {
                 log::error!("unable to create handle");
-                panic!()
+                return SystemError::FailedCreatingPtyHandle(result).into();
             }
         }
         let mut si_ex: STARTUPINFOEXW = unsafe { mem::zeroed() };
@@ -104,15 +107,15 @@ impl ContpySpawn {
                 &mut pi_client as *mut PROCESS_INFORMATION,
             );
             if exit_stat == 0 {
-                panic!("unable to create win process")
+                return SystemError::CreateProcessFailed(exit_stat).into();
             }
         }
 
-        ContpySpawn {
+        Ok(ContpySpawn {
             handle: Some(pty_handle as ContpyHandle),
             cin: Some(cin),
             cout: Some(cout),
             child: Some(pi_client.hProcess),
-        }
+        })
     }
 }

@@ -1,17 +1,41 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
+pub mod consume;
+pub mod killer;
+
+use jaypty_error::{EmptyResult, OsEmptyResult, OsResult};
 use polling::{Event, Poller};
 
-pub trait ChildPollRegisterIO {
-    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event);
-    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event);
-    unsafe fn unregister(&mut self, poller: &Arc<Poller>);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChildStatus {
+    Dead(i32),
+    Alive,
+    Orphaned,
 }
 
-pub trait ChildWatchDogIO: ChildPollRegisterIO {
-    fn status(&mut self) -> Option<crate::Result<u32>>;
+impl ChildStatus {
+    pub fn is_unfit(&self) -> bool {
+        match self {
+            Self::Dead(_) | Self::Orphaned => true,
+            _ => false,
+        }
+    }
 
-    fn is_dead(&self) -> bool;
+    pub fn is_dead(&self) -> bool {
+        Self::Dead(3) == *self
+    }
+}
 
-    fn wait(&mut self);
+pub trait ChildPollRegisterIO<E: Error> {
+    unsafe fn register(&mut self, poller: &Arc<Poller>, intrest: Event) -> Result<(), E>;
+    unsafe fn reregister(&mut self, poller: &Arc<Poller>, intrest: Event) -> Result<(), E>;
+    unsafe fn unregister(&mut self, poller: &Arc<Poller>) -> Result<(), E>;
+}
+
+pub trait ChildWatchDogIO<E: Error>: ChildPollRegisterIO<E> {
+    fn status(&mut self) -> Result<ChildStatus, E>;
+
+    fn is_dead(&self) -> Result<ChildStatus, E>;
+
+    fn wait(&mut self) -> Result<ChildStatus, E>;
 }

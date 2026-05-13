@@ -1,10 +1,8 @@
-use crate::error::LoadErrorKind;
-
-use super::Error;
-use super::Result;
 use std::mem;
 use std::sync::OnceLock;
 
+use jaypty_error::OsResult;
+use jaypty_error::SystemError;
 use windows_sys::Win32::System::Console::ClosePseudoConsole;
 use windows_sys::Win32::System::Console::CreatePseudoConsole;
 use windows_sys::Win32::System::Console::ResizePseudoConsole;
@@ -85,20 +83,22 @@ impl ContpySymbols {
     /// loads symbols from contpy.dll
     /// assuming it is in the same directory
     /// as the executable binary
-    unsafe fn load_dll() -> Result<ContpySymbols> {
+    unsafe fn load_dll() -> OsResult<ContpySymbols> {
         type LoadedFn = unsafe extern "system" fn() -> isize;
         unsafe {
             let hmodule = LoadLibraryW(w!("conpty.dll"));
             if hmodule.is_null() {
-                return Error::from(Error::failed_loading_pty(
-                    LoadErrorKind::UnableToFindContpyDll,
-                ))
-                .context("unable to load contpy.dll")
-                .into();
+                return SystemError::UnableToFindContpyDll.into();
             }
-            let create = GetProcAddress(hmodule, s!("CreatePseudoConsole")).unwrap();
-            let resize = GetProcAddress(hmodule, s!("ResizePseudoConsole")).unwrap();
-            let close = GetProcAddress(hmodule, s!("ClosePseudoConsole")).unwrap();
+            let create = GetProcAddress(hmodule, s!("CreatePseudoConsole")).ok_or(
+                SystemError::UnableToLoadContpyDllSymbol("CreatePseudoConsole"),
+            )?;
+            let resize = GetProcAddress(hmodule, s!("ResizePseudoConsole")).ok_or(
+                SystemError::UnableToLoadContpyDllSymbol("ResizePseudoConsole"),
+            )?;
+            let close = GetProcAddress(hmodule, s!("ClosePseudoConsole")).ok_or(
+                SystemError::UnableToLoadContpyDllSymbol("ClosePseudoTerminal"),
+            )?;
             Ok({
                 Self {
                     create: std::mem::transmute::<LoadedFn, CreatePseudoConsoleFn>(create),
