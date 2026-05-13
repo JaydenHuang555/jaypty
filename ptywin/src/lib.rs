@@ -40,7 +40,7 @@ mod tests {
         let mut watchdog = WinChildWatchdogIO::latch(child.as_raw_handle() as HANDLE).unwrap();
         let poller = Arc::new(Poller::new().unwrap());
         unsafe {
-            watchdog.register(&poller, Event::readable(0));
+            watchdog.register(&poller, Event::readable(0)).unwrap();
         }
         let mut events = Events::new();
         child.kill().expect("error when killing child");
@@ -48,6 +48,7 @@ mod tests {
         poller
             .wait_deadline(&mut events, Instant::now().add(POLLING_TIMEOUT))
             .expect("found error when polling");
+        unsafe { watchdog.unregister(&poller).unwrap() };
         assert_eq!(events.iter().next().is_some(), true);
     }
 }

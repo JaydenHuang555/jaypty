@@ -15,8 +15,11 @@ use polling::{Event, Poller};
 use windows_sys::Win32::System::{Console::COORD, Threading::TerminateProcess};
 
 use super::ContpyHandle;
-use crate::factory::ContpySpawn;
 use crate::{child::WinChildWatchdogIO, factory};
+use crate::{
+    child::{consume::ConsumedContpyConsumer, killer::ConsumedContpyChildKiller},
+    factory::ContpySpawn,
+};
 
 type R = factory::io::R;
 type W = factory::io::W;
@@ -66,7 +69,16 @@ impl PollingIntrestRegisterIO<SystemError> for ContpyPseudoTerminalIO {
     }
 }
 
-impl UnDefinedPseudoTerminalIO<R, W, WinChildWatchdogIO, SystemError> for ContpyPseudoTerminalIO {
+impl
+    UnDefinedPseudoTerminalIO<
+        R,
+        W,
+        WinChildWatchdogIO,
+        SystemError,
+        ConsumedContpyChildKiller,
+        ConsumedContpyConsumer,
+    > for ContpyPseudoTerminalIO
+{
     fn new(options: jaypty_core::Options) -> OsResult<Self> {
         let mut spawn = ContpySpawn::spawn(options)?;
         let child_handle = factory::watch(&mut spawn)?;
@@ -114,6 +126,10 @@ impl UnDefinedPseudoTerminalIO<R, W, WinChildWatchdogIO, SystemError> for Contpy
 
     fn cout(&mut self) -> &mut R {
         &mut self.cout
+    }
+
+    fn consume_child(&mut self) -> Option<ConsumedContpyConsumer> {
+        todo!()
     }
 }
 

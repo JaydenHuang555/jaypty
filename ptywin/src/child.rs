@@ -1,3 +1,6 @@
+pub mod consume;
+pub mod killer;
+
 use std::{
     ffi::c_void,
     future::Pending,
@@ -31,6 +34,8 @@ use windows_sys::Win32::{
         WaitForSingleObject,
     },
 };
+
+pub type ChildHandle = AtomicPtr<c_void>;
 
 struct Intrest {
     event: Event,
@@ -99,7 +104,7 @@ impl WinChildWatchdogIO {
                     .post(CompletionPacket::new(intrest.event))
                     .unwrap();
             }
-            if let Err(e) = packet.queuer.send(ChildStatus::Dead(exit_code)) {
+            if let Err(e) = packet.queuer.send(ChildStatus::Dead(exit_code as i32)) {
                 log::error!("found error with {}", e);
                 panic!("FOUND ERROR IN CHILD WATCHDOG THREAD WHEN SENDING PACKET: ({e})")
             }

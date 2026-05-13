@@ -9,18 +9,15 @@ pub use jaypty_core::child::*;
 
 #[cfg(test)]
 mod test {
-    use std::{
-        process::Command,
-        sync::Arc,
-        time::{Duration, Instant},
-    };
+    use std::{sync::Arc, time::Duration};
 
     use jaypty_core::{
         Options,
-        child::{ChildPollRegisterIO, ChildWatchDogIO},
+        child::{
+            ChildPollRegisterIO, consume::ConsumedChildConsumer as _, killer::ConsumedChildKiller,
+        },
     };
     use polling::{Event, Events, Poller};
-    use unixpty::{ConsumedChildConsumer, ConsumedChildKiller};
 
     use crate::{os::SystemWatchDogIO, system::PseudoTermainalSubsystem};
 

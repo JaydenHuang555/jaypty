@@ -1,3 +1,5 @@
+use ptywin::child::consume::ConsumedContpyConsumer;
+use ptywin::child::killer::ConsumedContpyChildKiller;
 use ptywin::{child::WinChildWatchdogIO, io::ContpyPseudoTerminalIO};
 
 pub type SystemPseudoTerminalIO = ContpyPseudoTerminalIO;
@@ -5,6 +7,9 @@ pub type SystemWatchDogIO = WinChildWatchdogIO;
 
 pub use ptywin::Cin;
 pub use ptywin::Cout;
+
+pub type ConsumedChildConsumer = ConsumedContpyConsumer;
+pub type ConsumedChildKiller = ConsumedContpyChildKiller;
 
 #[cfg(test)]
 mod tests {
