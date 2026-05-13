@@ -16,7 +16,7 @@ use windows_sys::Win32::{
 
 use crate::child::{ChildHandle, WinChildWatchdogIO};
 
-pub struct ConsumedContpyChildKiller(ChildHandle);
+pub struct ConsumedContpyChildKiller(pub(crate) ChildHandle);
 
 impl ConsumedContpyChildKiller {
     pub(crate) fn consume(self) -> ChildHandle {

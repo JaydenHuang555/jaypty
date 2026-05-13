@@ -4,7 +4,7 @@ use jaypty_core::child::consume::ConsumedChildConsumer;
 
 use crate::child::{ChildHandle, killer::ConsumedContpyChildKiller};
 
-pub struct ConsumedContpyConsumer(ChildHandle);
+pub struct ConsumedContpyConsumer(pub(crate) ChildHandle);
 
 impl ConsumedContpyConsumer {
     pub fn consume(self) -> ChildHandle {
@@ -14,6 +14,6 @@ impl ConsumedContpyConsumer {
 
 impl ConsumedChildConsumer<ConsumedContpyChildKiller> for ConsumedContpyConsumer {
     fn killer(self) -> ConsumedContpyChildKiller {
-        todo!()
+        ConsumedContpyChildKiller(self.consume())
     }
 }

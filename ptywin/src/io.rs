@@ -129,7 +129,9 @@ impl
     }
 
     fn consume_child(&mut self) -> Option<ConsumedContpyConsumer> {
-        todo!()
+        Some(ConsumedContpyConsumer(AtomicPtr::from(
+            self.child_handle.load(std::sync::atomic::Ordering::Relaxed),
+        )))
     }
 }
 
