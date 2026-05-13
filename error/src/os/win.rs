@@ -24,6 +24,10 @@ pub enum ContpyIOError {
     ChildWatchDogChannelDisconnected,
     #[error("child watch dog register intrest lock is poisoned")]
     ChildWatchDogRegisterMutexPoison,
+    #[error("failed to register child wait with exit code {0}")]
+    ChildFailedRegisterWait(u32),
+    #[error("failed to get child's exit code with error {0}")]
+    ChildFailedToGetExitCode(io::Error),
 }
 
 pub use ContpyIOError as SystemError;
